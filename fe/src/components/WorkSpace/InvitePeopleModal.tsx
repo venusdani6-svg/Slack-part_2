@@ -1,17 +1,27 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 type Props = {
     open: boolean;
     onClose: () => void;
 };
 
+// Email validation regex — matches standard email format
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const isValidEmail = (email: string): boolean => {
+    return EMAIL_REGEX.test(email.trim());
+};
+
 export default function InvitePeopleModal({ open, onClose }: Props) {
     const ref = useRef<HTMLDivElement>(null);
     const [inviteEmail, setInviteEmail] = useState("");
     const workspaceName = useSearchParams().get("workspace_name");
+
+    // Memoize email validation to prevent unnecessary re-computations
+    const isEmailValid = useMemo(() => isValidEmail(inviteEmail), [inviteEmail]);
 
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
@@ -34,23 +44,29 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
     }, [open, onClose]);
 
     if (!open) return null;
+
     const onSubmit = async () => {
-        if (!inviteEmail) return alert("input email!");
-        const res = await fetch("http://192.168.137.98:5050/api/auth/invited-user", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                email: inviteEmail,
-                workspaceName: workspaceName,
-            }),
-        });
-        onClose();
+        if (!isEmailValid) return alert("Please enter a valid email!");
+        
+        try {
+            await fetch("http://192.168.137.106:5050/api/auth/invited-user", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: inviteEmail,
+                    workspaceName: workspaceName,
+                }),
+            });
+            onClose();
+        } catch (error) {
+            console.error("Failed to send invite:", error);
+        }
     };
 
     return (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center">
+        <div className="fixed inset-0 z-999 flex items-center justify-center">
             {/* OVERLAY */}
             <div className="absolute inset-0 bg-black/30" />
 
@@ -110,9 +126,9 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
 
                     {/* OR DIVIDER */}
                     <div className="flex items-center gap-3 text-[12px] text-gray-400">
-                        <div className="flex-1 h-[1px] bg-gray-200" />
+                        <div className="flex-1 h-px bg-gray-200" />
                         <span>OR</span>
-                        <div className="flex-1 h-[1px] bg-gray-200" />
+                        <div className="flex-1 h-px bg-gray-200" />
                     </div>
 
                     {/* GOOGLE */}
@@ -214,14 +230,21 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
                     </button>
 
                     <button
-                        className="
+                        disabled={!isEmailValid}
+                        className={`
                           h-[36px]
                           px-4
                           rounded-md
                           text-[14px]
-                          bg-gray-200 text-gray-500
-                          pointer
-                        "
+                          font-medium
+                          transition-colors
+                          duration-200
+                          ${
+                            isEmailValid
+                              ? "bg-green-400 text-white hover:bg-green-500 cursor-pointer"
+                              : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                          }
+                        `}
                         onClick={onSubmit}
                     >
                         Send

@@ -33,4 +33,12 @@ export class ChannelPresenter {
     joinChannel(channelId: string, userId: string) {
         return this.channelService.joinChannel(channelId, userId);
     }
+
+    getChannelsForUser(workspaceId: string, userId: string) {
+        return this.channelService.getChannelsForUser(workspaceId, userId);
+    }
+
+    inviteMembers(channelId: string, requestingUserId: string, invitedUserIds: string[]) {
+        return this.channelService.inviteMembers(channelId, requestingUserId, invitedUserIds);
+    }
 }

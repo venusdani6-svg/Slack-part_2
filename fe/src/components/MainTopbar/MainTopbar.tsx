@@ -10,11 +10,13 @@ import { LuBell } from "react-icons/lu";
 import { api } from "@/api";
 import { Tooltip } from "./Tooltip";
 import Starred from "./Starred";
+import { useSocket } from "@/providers/SocketProvider";
 
 interface ChannelDetail {
   id: string;
   name: string;
-  members: { id: string }[];
+  channelType: 'public' | 'private';
+  members: { id: string; dispname: string; email: string; avatar?: string }[];
 }
 
 export default function MainTopBar() {
@@ -25,6 +27,7 @@ export default function MainTopBar() {
 
   const [channel, setChannel] = useState<ChannelDetail | null>(null);
   const [memberCount, setMemberCount] = useState<number>(0);
+  const { socket } = useSocket();
 
   useEffect(() => {
     if (!channelId) {
@@ -44,7 +47,21 @@ export default function MainTopBar() {
       .catch(() => setMemberCount(0));
   }, []);
 
+  // Task 9.3 — real-time member list updates via channel:updated
+  useEffect(() => {
+    if (!socket || !channelId) return;
+    const handler = (updated: ChannelDetail) => {
+      if (updated.id === channelId) setChannel(updated);
+    };
+    socket.on('channel:updated', handler);
+    return () => { socket.off('channel:updated', handler); };
+  }, [socket, channelId]);
+
   const activeChannel = channel?.name ?? "";
+  const isPrivate = channel?.channelType === 'private';
+  const members = channel?.members ?? [];
+  const visibleMembers = members.slice(0, 5);
+  const extraCount = members.length - visibleMembers.length;
 
   return (
     <div className="flex justify-between items-center h-[49px] px-4 py-2 ">
@@ -65,12 +82,38 @@ export default function MainTopBar() {
       {/* RIGHT */}
       <div className="flex items-center gap-2">
 
-        {/* Members */}
+        {/* Private channel member avatars row */}
+        {isPrivate && members.length > 0 && (
+          <div className="flex items-center">
+            <div className="flex -space-x-1">
+              {visibleMembers.map((m) => (
+                <Tooltip key={m.id} text1={m.dispname} children={
+                  <div className="w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center overflow-hidden shrink-0">
+                    {m.avatar ? (
+                      <img src={m.avatar} alt={m.dispname} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white text-[10px] font-semibold leading-none">
+                        {m.dispname.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                } />
+              ))}
+            </div>
+            {extraCount > 0 && (
+              <span className="ml-1 text-xs text-gray-500">+{extraCount} more</span>
+            )}
+          </div>
+        )}
+
+        {/* Members count */}
         <Tooltip
           children={
             <button className="flex items-center gap-1 px-2 py-1 border border-gray-300 rounded cursor-pointer hover:bg-gray-100">
               <BsPerson color="#5d524c" size={20} />
-              <span className="text-sm text-[#5d524c]">{memberCount}</span>
+              <span className="text-sm text-[#5d524c]">
+                {isPrivate ? members.length : memberCount}
+              </span>
             </button>
           }
           text1="View all members of this channel"

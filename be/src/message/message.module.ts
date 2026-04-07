@@ -18,6 +18,7 @@ import { User } from 'src/user/entities/user.entity';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { ActivityModule } from 'src/activity/activity.module';
+import { ChannelService } from 'src/channel/channel.service';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ActivityModule } from 'src/activity/activity.module';
     MessageRepository,
     MessageReactionRepository,
     MessageGateway,
+    ChannelService,
   ],
   exports: [MessagePresenter],
 })

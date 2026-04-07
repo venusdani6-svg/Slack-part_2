@@ -3,11 +3,14 @@ import {
     WebSocketServer,
     SubscribeMessage,
     MessageBody,
+    ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { MessagePresenter } from '../presenter/message.presenter';
 import { ActivityService } from 'src/activity/activity.service';
 import { ActivityGateway } from 'src/activity/activity.gateway';
+import { ChannelService } from 'src/channel/channel.service';
+import { ChannelType } from 'src/channel/dto/create-channel.dto';
 
 /** Extract all @userId mentions from HTML message content */
 function extractMentions(content: string): string[] {
@@ -30,10 +33,29 @@ export class MessageGateway {
         private readonly presenter: MessagePresenter,
         private readonly activityService: ActivityService,
         private readonly activityGateway: ActivityGateway,
+        private readonly channelService: ChannelService,
     ) {}
 
     @SubscribeMessage('join_channel')
-    handleJoin(client: Socket, channelId: string) {
+    async handleJoin(client: Socket, payload: { channelId: string; userId: string }) {
+        const { channelId, userId } = payload;
+
+        let channel: Awaited<ReturnType<ChannelService['getChannelById']>> | null = null;
+        try {
+            channel = await this.channelService.getChannelById(channelId);
+        } catch {
+            client.emit('channel:access_denied', { message: 'Channel not found' });
+            return;
+        }
+
+        if (channel.channelType === ChannelType.PRIVATE) {
+            const member = await this.channelService.isMember(channelId, userId);
+            if (!member) {
+                client.emit('channel:access_denied', { message: 'You are not a member of this channel' });
+                return;
+            }
+        }
+
         client.join(channelId);
     }
 
@@ -43,7 +65,23 @@ export class MessageGateway {
     }
 
     @SubscribeMessage('send_message')
-    async handleMessage(@MessageBody() payload: any) {
+    async handleMessage(@MessageBody() payload: any, @ConnectedSocket() client: Socket) {
+        let channel: Awaited<ReturnType<ChannelService['getChannelById']>> | null = null;
+        try {
+            channel = await this.channelService.getChannelById(payload.channelId);
+        } catch {
+            client.emit('channel:access_denied', { message: 'Channel not found' });
+            return;
+        }
+
+        if (channel.channelType === ChannelType.PRIVATE) {
+            const member = await this.channelService.isMember(payload.channelId, payload.senderId);
+            if (!member) {
+                client.emit('channel:access_denied', { message: 'You are not a member of this channel' });
+                return;
+            }
+        }
+
         const message = await this.presenter.sendMessage(payload);
         const preview = toPreview(payload.content ?? '');
         const actor = message.sender;

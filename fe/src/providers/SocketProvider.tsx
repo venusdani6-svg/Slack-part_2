@@ -85,6 +85,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
             prependItemRef.current(item);
         });
 
+        // ── channel access denied ────────────────────────────────────────────
+        socketInstance.on("channel:access_denied", ({ message }: { message: string }) => {
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("channel:access_denied", { detail: { message } }));
+            }
+        });
+
         return () => {
             socketInstance.disconnect();
         };

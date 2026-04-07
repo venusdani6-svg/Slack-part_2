@@ -7,6 +7,7 @@ import { FaLock } from "react-icons/fa6";
 import { useSocket } from "@/providers/SocketProvider";
 import { FaEdit } from "react-icons/fa";
 import { useEffect, useState } from "react";
+import React from "react";
 import EditChannelModal from "../ui/modal/EditChannelModal";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/Authcontext";
@@ -21,7 +22,8 @@ interface ChannelItemProps {
   currentUserId: string | null;
 }
 
-export default function ChannelItem({ name, id, type, creatorId, currentUserId }: ChannelItemProps) {
+// ✅ Memoize to prevent unnecessary re-renders when parent re-renders
+function ChannelItem({ name, id, type, creatorId, currentUserId }: ChannelItemProps) {
   const { socket } = useSocket();
   const router = useRouter();
   const params = useParams();
@@ -121,8 +123,9 @@ export default function ChannelItem({ name, id, type, creatorId, currentUserId }
         workspaceId={workspaceId}
         channel={{ id, name, channelType: type }}
         userId={currentUserId}
-
-/>
+      />
     </div>
   );
 }
+
+export default React.memo(ChannelItem);

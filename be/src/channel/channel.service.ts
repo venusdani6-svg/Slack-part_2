@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Channel } from './entities/channel.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { ChannelType } from './dto/create-channel.dto';
@@ -84,8 +84,9 @@ export class ChannelService {
         workspaceId: string;
         userId: string;
         type: ChannelType;
+        invitedUserIds?: string[];
     }) {
-        const { name, workspaceId, userId, type } = data;
+        const { name, workspaceId, userId, type, invitedUserIds } = data;
 
         if (!name || !workspaceId || !userId || !type) {
             throw new BadRequestException('Missing required fields');
@@ -127,10 +128,65 @@ export class ChannelService {
             workspace,
             channelType: type,
             creatorId: userId,
-            members: type === 'private' ? [user] : [],
+            members: type === ChannelType.PRIVATE ? [user] : [],
         });
 
+        if (type === ChannelType.PRIVATE && invitedUserIds && invitedUserIds.length > 0) {
+            const validUsers = await this.userRepo.findBy({ id: In(invitedUserIds) });
+            const existingIds = new Set(channel.members.map(m => m.id));
+            for (const invitedUser of validUsers) {
+                if (!existingIds.has(invitedUser.id)) {
+                    channel.members.push(invitedUser);
+                }
+            }
+        }
+
         return await this.channelRepo.save(channel);
+    }
+
+    async getChannelsForUser(workspaceId: string, userId: string): Promise<Channel[]> {
+        return this.channelRepo
+            .createQueryBuilder('channel')
+            .leftJoinAndSelect('channel.members', 'member')
+            .where('channel.workspaceId = :workspaceId', { workspaceId })
+            .andWhere('(channel.channelType = :public OR member.id = :userId)', { public: ChannelType.PUBLIC, userId })
+            .getMany();
+    }
+
+    async isMember(channelId: string, userId: string): Promise<boolean> {
+        const channel = await this.channelRepo.findOne({
+            where: { id: channelId },
+            relations: ['members'],
+        });
+        if (!channel) return false;
+        return channel.members.some(m => m.id === userId);
+    }
+
+    async inviteMembers(channelId: string, requestingUserId: string, invitedUserIds: string[]): Promise<Channel> {
+        const channel = await this.channelRepo.findOne({
+            where: { id: channelId },
+            relations: ['members'],
+        });
+
+        if (!channel) throw new NotFoundException('Channel not found');
+
+        if (channel.channelType === ChannelType.PUBLIC) {
+            throw new BadRequestException('Cannot invite members to a public channel');
+        }
+
+        if (channel.creatorId !== requestingUserId) {
+            throw new ForbiddenException('Only the channel creator can invite members');
+        }
+
+        const validUsers = await this.userRepo.findBy({ id: In(invitedUserIds) });
+        const existingIds = new Set(channel.members.map(m => m.id));
+        for (const user of validUsers) {
+            if (!existingIds.has(user.id)) {
+                channel.members.push(user);
+            }
+        }
+
+        return this.channelRepo.save(channel);
     }
 
     async getChannelById(channelId: string) {

@@ -84,7 +84,14 @@ export const MainPage = (props: { userData: User | null }) => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.emit("join_channel", channelId);
+        socket.emit("join_channel", { channelId, userId: props.userData?.id ?? "" });
+
+        socket.on("channel:access_denied", ({ message }: { message: string }) => {
+            console.warn("Channel access denied:", message);
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("channel:access_denied", { detail: { message } }));
+            }
+        });
 
         socket.on("new_message", (newMsg: any) => {
             if (newMsg.parentId) return;
@@ -113,6 +120,7 @@ export const MainPage = (props: { userData: User | null }) => {
 
         return () => {
             socket.off("new_message");
+            socket.off("channel:access_denied");
             socket.off("thread_updated");
             socket.off("reaction_updated");
             socket.off("messageEdited");
