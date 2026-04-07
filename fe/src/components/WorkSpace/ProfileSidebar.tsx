@@ -21,9 +21,11 @@ type Props = {
     open: boolean;
     onClose: () => void;
     userdata: any | null;
+    /** When true, hides all edit controls — used when viewing another user's profile */
+    readonly?: boolean;
 };
 
-export default function ProfileSidebar({ open, onClose, userdata }: Props) {
+export default function ProfileSidebar({ open, onClose, userdata, readonly = false }: Props) {
     const [editOpen, setEditOpen] = useState(false);
     const [user, setUser] = useState<User | null>(null);
 
@@ -299,7 +301,8 @@ export default function ProfileSidebar({ open, onClose, userdata }: Props) {
                                         </div>
                                     )}
 
-                                    {/* Hover Overlay */}
+                                    {/* Hover Overlay — only for own profile */}
+                                    {!readonly && (
                                     <div
                                         onClick={() => setEditOpen(true)}
                                         className="
@@ -313,6 +316,7 @@ export default function ProfileSidebar({ open, onClose, userdata }: Props) {
                                             Change photo
                                         </span>
                                     </div>
+                                    )}
                                 </div>
 
                                 {/* Name */}
@@ -321,12 +325,14 @@ export default function ProfileSidebar({ open, onClose, userdata }: Props) {
                                         {user.dispname}
                                     </div>
 
+                                    {!readonly && (
                                     <button
                                         onClick={() => setEditOpen(true)}
                                         className="text-[16px] font-bold text-[#1264A3] hover:underline mt-1"
                                     >
                                         Edit
                                     </button>
+                                    )}
                                 </div>
 
                                 {/* Presence */}
@@ -344,7 +350,8 @@ export default function ProfileSidebar({ open, onClose, userdata }: Props) {
                                 </div>
                             </div>
 
-                            {/* Actions */}
+                            {/* Actions — only for own profile */}
+                            {!readonly && (
                             <div className="flex gap-2 mt-5">
                                 <button className="flex-1 h-[36px] border rounded-md hover:bg-gray-100 transition">
                                     Set a status
@@ -356,6 +363,7 @@ export default function ProfileSidebar({ open, onClose, userdata }: Props) {
                                     ⋮
                                 </button>
                             </div>
+                            )}
 
                             {/* Contact */}
                             <div className="mt-6 border-t pt-4">
@@ -363,9 +371,11 @@ export default function ProfileSidebar({ open, onClose, userdata }: Props) {
                                     <span className="font-semibold text-[14px]">
                                         Contact information
                                     </span>
+                                    {!readonly && (
                                     <button className="text-[#1264A3] text-sm hover:underline">
                                         Edit
                                     </button>
+                                    )}
                                 </div>
 
                                 <div className="mt-3">
@@ -384,9 +394,11 @@ export default function ProfileSidebar({ open, onClose, userdata }: Props) {
                                     <span className="font-semibold text-[14px]">
                                         About me
                                     </span>
+                                    {!readonly && (
                                     <button className="text-[#1264A3] text-sm hover:underline">
                                         Edit
                                     </button>
+                                    )}
                                 </div>
 
                                 <div className="mt-2 text-sm text-[#1264A3] cursor-pointer hover:underline">

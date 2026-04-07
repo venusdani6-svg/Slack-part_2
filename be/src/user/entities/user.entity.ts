@@ -21,8 +21,18 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column({nullable: true })
+  @Column({ nullable: true })
   dispname: string;
+
+  /** Directory fields — added via synchronize:true, no migration needed */
+  @Column({ nullable: true })
+  title: string;
+
+  @Column({ nullable: true })
+  location: string;
+
+  @Column({ default: 'offline' })
+  status: string; // 'online' | 'offline' | 'away'
 
   // many-to-many workspace members
   @ManyToMany(() => Workspace, (workspace) => workspace.members)
@@ -46,6 +56,7 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
   @OneToMany(() => Message, (message) => message.sender)
   messages: Message[];
 }
