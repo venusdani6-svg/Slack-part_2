@@ -43,4 +43,15 @@ export class UserPresenter {
   updateProfile(userId: string, data: { dispname?: string; avatar?: string }) {
     return this.userService.updateProfile(userId, data);
   }
+
+  getWorkspaceUsers(workspaceId: string) {
+    return this.userService.getWorkspaceUsers(workspaceId);
+  }
+
+  updateDirectoryUser(
+    userId: string,
+    data: { name?: string; title?: string; role?: string },
+  ) {
+    return this.userService.updateDirectoryUser(userId, data);
+  }
 }

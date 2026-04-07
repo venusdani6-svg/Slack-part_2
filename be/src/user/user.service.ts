@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -7,13 +7,16 @@ import { User } from './entities/user.entity';
 import { ImportUserDto } from './dto/import-user.dto';
 import { hash } from 'bcrypt';
 import { UserGateway } from './user.gateway';
+import { Workspace } from 'src/workspace/entities/workspace.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    private readonly userGateway: UserGateway, // ✅ ADD THIS
+    @InjectRepository(Workspace)
+    private workspaceRepository: Repository<Workspace>,
+    private readonly userGateway: UserGateway,
   ) { }
 
   async create(createUserDto: CreateUserDto) {
@@ -60,31 +63,66 @@ export class UserService {
     );
   }
 
-  // ================================================
-  async updateProfile(userId: string, data: any) {
-    console.log("data====<>", data);
-    const user = await this.findOne(userId);
-    console.log("userservice====<>", user?.avatar);
+  /** Return all members of a workspace shaped for the directory */
+  async getWorkspaceUsers(workspaceId: string) {
+    const workspace = await this.workspaceRepository.findOne({
+      where: { id: workspaceId },
+      relations: ['members'],
+    });
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
-    if (!user) {
-      throw new Error('User not found');
-    }
+    return workspace.members.map((u) => ({
+      id: u.id,
+      name: u.dispname ?? u.email,
+      email: u.email,
+      avatar: u.avatar ?? '/uploads/avatar.png',
+      title: u.title ?? '',
+      role: u.role,
+      location: u.location ?? '',
+      status: u.status ?? 'offline',
+    }));
+  }
+
+  /** Update directory-editable fields */
+  async updateDirectoryUser(
+    userId: string,
+    data: { name?: string; title?: string; role?: string },
+  ) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (data.name !== undefined) user.dispname = data.name;
+    if (data.title !== undefined) user.title = data.title;
+    if (data.role !== undefined) user.role = data.role as any;
+
+    const saved = await this.userRepository.save(user);
+    return {
+      id: saved.id,
+      name: saved.dispname ?? saved.email,
+      email: saved.email,
+      avatar: saved.avatar ?? '/uploads/avatar.png',
+      title: saved.title ?? '',
+      role: saved.role,
+      location: saved.location ?? '',
+      status: saved.status ?? 'offline',
+    };
+  }
+
+  async updateProfile(userId: string, data: any) {
+    const user = await this.findOne(userId);
+    if (!user) throw new Error('User not found');
 
     user.dispname = data.dispname ?? user.dispname;
     user.avatar = data.avatar ?? user.avatar;
 
     const saved = await this.userRepository.save(user);
 
-    // ✅ THIS IS THE MISSING PART
     this.userGateway.emitProfileUpdated({
       userId: saved.id,
       dispname: saved.dispname,
       avatar: saved.avatar,
     });
 
-    return {
-      dispname: saved.dispname,
-      avatar: saved.avatar,
-    };
+    return { dispname: saved.dispname, avatar: saved.avatar };
   }
 }
