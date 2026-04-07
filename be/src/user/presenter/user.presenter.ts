@@ -10,7 +10,7 @@ import { ImportUserDto } from '../dto/import-user.dto';
  */
 @Injectable()
 export class UserPresenter {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   create(dto: CreateUserDto) {
     return this.userService.create(dto);

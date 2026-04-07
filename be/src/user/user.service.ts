@@ -14,7 +14,7 @@ export class UserService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private readonly userGateway: UserGateway, // ✅ ADD THIS
-  ) {}
+  ) { }
 
   async create(createUserDto: CreateUserDto) {
     const existingUser = await this.findOneByEmail(createUserDto.email);
@@ -62,10 +62,10 @@ export class UserService {
 
   // ================================================
   async updateProfile(userId: string, data: any) {
-    console.log("data====<>",data);
+    console.log("data====<>", data);
     const user = await this.findOne(userId);
-    console.log("userservice====<>",user?.avatar);
-    
+    console.log("userservice====<>", user?.avatar);
+
     if (!user) {
       throw new Error('User not found');
     }

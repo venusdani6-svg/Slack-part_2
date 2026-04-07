@@ -21,7 +21,7 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column({nullable: true })
+  @Column({ nullable: true })
   dispname: string;
 
   // many-to-many workspace members
