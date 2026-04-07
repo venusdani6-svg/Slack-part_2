@@ -27,7 +27,7 @@ import { UserPresenter } from '../presenter/user.presenter';
  */
 @Controller('user')
 export class UserController {
-  constructor(private readonly presenter: UserPresenter) {}
+  constructor(private readonly presenter: UserPresenter) { }
 
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
@@ -102,5 +102,20 @@ export class UserController {
       dispname: body.dispname,
       avatar: file ? `/uploads/avatars/${file.filename}` : undefined,
     });
+  }
+
+  /** GET /api/user/workspace/:workspaceId — all members of a workspace */
+  @Get('workspace/:workspaceId')
+  getWorkspaceUsers(@Param('workspaceId') workspaceId: string) {
+    return this.presenter.getWorkspaceUsers(workspaceId);
+  }
+
+  /** PATCH /api/user/directory/:id — edit name / title / role */
+  @Patch('directory/:id')
+  updateDirectoryUser(
+    @Param('id') id: string,
+    @Body() body: { name?: string; title?: string; role?: string },
+  ) {
+    return this.presenter.updateDirectoryUser(id, body);
   }
 }

@@ -10,7 +10,7 @@ import { ImportUserDto } from '../dto/import-user.dto';
  */
 @Injectable()
 export class UserPresenter {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   create(dto: CreateUserDto) {
     return this.userService.create(dto);
@@ -42,5 +42,16 @@ export class UserPresenter {
 
   updateProfile(userId: string, data: { dispname?: string; avatar?: string }) {
     return this.userService.updateProfile(userId, data);
+  }
+
+  getWorkspaceUsers(workspaceId: string) {
+    return this.userService.getWorkspaceUsers(workspaceId);
+  }
+
+  updateDirectoryUser(
+    userId: string,
+    data: { name?: string; title?: string; role?: string },
+  ) {
+    return this.userService.updateDirectoryUser(userId, data);
   }
 }

@@ -14,4 +14,4 @@ import { UserGateway } from './user.gateway';
     providers: [UserService, UserPresenter, UserGateway],
     exports: [UserService],
 })
-export class UserModule {}
+export class UserModule { }
