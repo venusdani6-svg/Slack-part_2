@@ -5,7 +5,7 @@ import { renderMentions } from '@/lib/renderMentions';
 import DOMPurify from 'dompurify';
 import dynamic from "next/dynamic";
 import React, { useEffect, useRef, useState } from "react";
-import MentionProfileTooltip, { MentionProfile } from "@/components/ui/messageEditor/MentionProfileTooltip";
+import ProfileSidebar from "@/components/WorkSpace/ProfileSidebar";
 import {
   FaEllipsisV,
   FaRegBookmark,
@@ -111,9 +111,8 @@ export const SlackMessage: React.FC<SlackMessageProps> = ({
   const [downloadTxt, setDownloadTxt] = useState('');
   const [isPending, setIsPending] = useState(false);
 
-  // Mention profile tooltip
-  const [mentionProfile, setMentionProfile] = useState<MentionProfile | null>(null);
-  const [mentionTooltipPos, setMentionTooltipPos] = useState({ top: 0, left: 0 });
+  // Mention profile sidebar
+  const [mentionUserId, setMentionUserId] = useState<string | null>(null);
   /** URL of the image currently shown in the lightbox modal (null = closed) */
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
@@ -281,27 +280,8 @@ export const SlackMessage: React.FC<SlackMessageProps> = ({
     const mentionEl = target.closest(".mention") as HTMLElement | null;
     if (!mentionEl) return;
     const id = mentionEl.getAttribute("data-id");
-    const label = mentionEl.getAttribute("data-label");
-    if (!id || !label) return;
-
-    const rect = mentionEl.getBoundingClientRect();
-    const tooltipW = 256;
-    const tooltipH = 80;
-    const gap = 6;
-    let top = rect.bottom + gap;
-    let left = rect.left;
-    if (top + tooltipH > window.innerHeight) top = rect.top - tooltipH - gap;
-    if (left + tooltipW > window.innerWidth) left = window.innerWidth - tooltipW - gap;
-    if (left < gap) left = gap;
-
-    // Build a minimal profile from what we have in the DOM; avatar falls back to default
-    setMentionTooltipPos({ top, left });
-    setMentionProfile({
-      id,
-      dispname: label,
-      email: mentionEl.getAttribute("data-email") ?? label,
-      avatar: mentionEl.getAttribute("data-avatar") ?? "/uploads/avatar.png",
-    });
+    if (!id) return;
+    setMentionUserId(id);
   };
 
   const formatTime = (isoString: string) => {
@@ -617,14 +597,13 @@ export const SlackMessage: React.FC<SlackMessageProps> = ({
         </div>
       )}
 
-      {/* Mention profile tooltip */}
-      {mentionProfile && (
-        <MentionProfileTooltip
-          profile={mentionProfile}
-          position={mentionTooltipPos}
-          onClose={() => setMentionProfile(null)}
-        />
-      )}
+      {/* Mention profile sidebar — opens when a @mention is clicked */}
+      <ProfileSidebar
+        open={!!mentionUserId}
+        onClose={() => setMentionUserId(null)}
+        userdata={mentionUserId ? { id: mentionUserId } : null}
+        readonly={mentionUserId !== currentUserId}
+      />
     </div>
   );
 };
