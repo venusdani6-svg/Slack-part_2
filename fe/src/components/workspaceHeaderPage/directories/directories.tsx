@@ -7,9 +7,17 @@ import DirectoriesExternal from "./DirectoriesExternal";
 import DirectoriesInvitation from "./DirectoriesInvitation";
 import DirectoriesUserGroup from "./DirectoriesUserGroups";
 import ChannelNavTabvar from "../component/channel_nav_tabvar";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { useWorkspace } from "@/context/Workspacecontext";
 
 export default function Directories() {
-    const [page, setPage] = useState("people")
+    const [page, setPage] = useState("people");
+
+    // URL param is source of truth; fall back to context (localStorage-rehydrated)
+    const urlWorkspaceId = useWorkspaceId();
+    const { workspace } = useWorkspace();
+    const workspaceId = urlWorkspaceId ?? workspace?.id;
+
     return (
         <div className="flex bg-[#ffffff] text-[#313131] border-none border-[#797c814d]
          w-[calc(100vw-430px)] overflow-hidden rounded-tr-[5px] rounded-br-[5px]">
@@ -21,7 +29,7 @@ export default function Directories() {
 
                 <div className="w-full    border-[#ffffff]">
                     <ChannelNavTabvar setPage={setPage} tabs={tabs} px="px-[250px]" />
-                    {page === "people" && <DirectoriesPeople />}
+                    {page === "people" && <DirectoriesPeople workspaceId={workspaceId} />}
                     {page === "Channels" && <DirectoriesChannel />}
                     {page === "External" && <DirectoriesExternal />}
                     {page === "Invitation" && <DirectoriesInvitation />}
