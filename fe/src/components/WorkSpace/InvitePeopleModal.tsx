@@ -1,17 +1,27 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 type Props = {
     open: boolean;
     onClose: () => void;
 };
 
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const isValidEmail = (email: string): boolean => {
+    return EMAIL_REGEX.test(email);
+};
+
 export default function InvitePeopleModal({ open, onClose }: Props) {
     const ref = useRef<HTMLDivElement>(null);
     const [inviteEmail, setInviteEmail] = useState("");
     const workspaceName = useSearchParams().get("workspace_name");
+
+    // Memoize email validation to avoid unnecessary recalculations
+    const isEmailValid = useMemo(() => isValidEmail(inviteEmail), [inviteEmail]);
 
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
@@ -75,7 +85,7 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
                         className="text-gray-500 cursor-pointer hover:text-black"
                         onClick={onClose}
                     >
-                        ✕
+                        ?
                     </button>
                 </div>
 
@@ -146,7 +156,7 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
                             "
                         >
                             Member
-                            <span className="text-gray-400">▾</span>
+                            <span className="text-gray-400">?</span>
                         </div>
                     </div>
 
@@ -168,7 +178,7 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
                         </span>{" "}
                         or guest accounts.
                         <button className="absolute cursor-pointer right-2 top-2 text-gray-400">
-                            ✕
+                            ?
                         </button>
                     </div>
 
@@ -214,15 +224,9 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
                     </button>
 
                     <button
-                        className="
-                          h-[36px]
-                          px-4
-                          rounded-md
-                          text-[14px]
-                          bg-gray-200 text-gray-500
-                          pointer
-                        "
+                        className={isEmailValid ? "h-[36px] px-4 rounded-md text-[14px] transition-colors bg-green-400 text-white hover:bg-green-500" : "h-[36px] px-4 rounded-md text-[14px] transition-colors bg-gray-200 text-gray-500"}
                         onClick={onSubmit}
+                        disabled={!isEmailValid}
                     >
                         Send
                     </button>
