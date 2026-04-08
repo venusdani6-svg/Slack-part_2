@@ -46,7 +46,7 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
     if (!open) return null;
     const onSubmit = async () => {
         if (!inviteEmail) return alert("input email!");
-        const res = await fetch("http://192.168.137.98:5050/api/auth/invited-user", {
+        const res = await fetch("http://192.168.137.106:5050/api/auth/invited-user", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
