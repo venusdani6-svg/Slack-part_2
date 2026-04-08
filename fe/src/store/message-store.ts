@@ -5,18 +5,21 @@ type Message = any;
 type MessageStore = {
   messages: Message[];
   loading: boolean;
-  flag: string | null;
+  flag: string;
   setMessages: (messages: Message[]) => void;
   appendMessage: (message: Message) => void;
   setLoading: (loading: boolean) => void;
   clearMessages: () => void;
-  setFlag: (flag: string | null) => void;
+  setFlag: (flag: string) => void;
 };
 
 export const useMessageStore = create<MessageStore>((set) => ({
   messages: [],
   loading: true,
-  flag: null,
+  // Initialize to "" so flag === "" renders the default message/DM view on first
+  // mount and after full page reloads — previously null caused the content area
+  // to stay blank because every conditional checked flag === "" (not null).
+  flag: "",
 
   setMessages: (messages) => set({ messages }),
   appendMessage: (message) =>

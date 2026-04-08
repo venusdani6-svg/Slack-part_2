@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { FiHash, FiX, FiSearch } from "react-icons/fi";
 import { useSocket } from "@/providers/SocketProvider";
 import ModalOverlay from "./ModalOverlay";
+import { getAvatarUrl } from "@/lib/messageUtils";
 
 type WorkspaceMember = {
   id: string;
@@ -203,7 +204,7 @@ export default function CreateChannelModal({
                 >
                   <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0 overflow-hidden">
                     {m.avatar ? (
-                      <img src={m.avatar} alt={m.dispname} className="w-full h-full object-cover" />
+                      <img src={getAvatarUrl(m.avatar)} alt={m.dispname ?? m.email} className="w-full h-full object-cover" />
                     ) : (
                       (m.dispname?.[0] ?? m.email?.[0] ?? "?").toUpperCase()
                     )}
