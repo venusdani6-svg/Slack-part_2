@@ -71,7 +71,7 @@ export default function NavItem({
                     `}
                 >
                     <Image
-                        src={`/svg/${isActive ? label + "Active" : label}.svg`}
+                        src={svg/${isActive ? label + "Active" : label}.svg}
                         alt={label}
                         className="w-5 invert   group-hover:w-6"
                     />
