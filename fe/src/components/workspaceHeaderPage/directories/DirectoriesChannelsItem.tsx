@@ -1,8 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { IconType } from "react-icons";
 import { useState } from "react";
 import CustomButton from "../component/channel_button";
+import { FiHash } from "react-icons/fi";
+import { FaLock } from "react-icons/fa";
 
 type ChannelsItemProps = {
   title?: string;
@@ -29,7 +32,7 @@ export default function DirectoriesChannelsItem({
       <div className="ml-[10px]">
         <div className="w-[100%] h-[60%]">
           <div className="flex items-center gap-[10px]">
-            {Icon && <Icon size={12} className="text-black" />}
+           {comment === "public" ? <FiHash size={12} className="text-black"/> : <FaLock size={12} className="text-black"/>}
             <div className="flex flex-col justify-center">
               <div className="text-[#313131] text-[14px] font-[500]">
                 <span className="text-[18px] font-bold mr-[15px]">{title}</span>
