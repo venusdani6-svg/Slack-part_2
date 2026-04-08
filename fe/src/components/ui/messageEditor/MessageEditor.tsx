@@ -365,30 +365,24 @@ export default function MessageEditor({
     });
   };
 
-  // ── Mention popup position: 15px above the @ caret ───────────────────────
-  // rect is the DOMRect of the @ character from Tiptap's clientRect callback.
-  // We place the popup so its bottom edge is 15px above rect.top.
-  // Mention popup position: 5px above the @ caret
+  // ── Mention popup position: bottom-anchored, 15px above the @ caret ────────
+  // We anchor the popup's bottom edge 15px above rect.top so the list grows
+  // upward from that point. CSS `bottom` in fixed positioning equals
+  // (window.innerHeight - desired_bottom_y).
   const mentionPopupStyle: React.CSSProperties = mentionPopup
     ? (() => {
         const { rect } = mentionPopup;
-        const POPUP_OFFSET = 5;
-        const popupH = mentionPopupHeight;
+        const POPUP_OFFSET = 15;
         const popupW = 320;
         const margin = 4;
-        const preferredTop = rect.top - POPUP_OFFSET - popupH;
-        let top: number;
-        if (preferredTop >= margin) {
-          top = preferredTop;
-        } else if (window.innerHeight - rect.bottom - POPUP_OFFSET >= popupH) {
-          top = rect.bottom + POPUP_OFFSET;
-        } else {
-          top = margin;
-        }
+        // Desired bottom edge of the popup = 15px above the @ character
+        const desiredBottom = rect.top - POPUP_OFFSET;
+        // Convert to CSS `bottom` (distance from viewport bottom)
+        const bottom = window.innerHeight - desiredBottom;
         let left = rect.left;
         if (left + popupW > window.innerWidth - margin) left = window.innerWidth - popupW - margin;
         if (left < margin) left = margin;
-        return { position: "fixed", top, left, zIndex: 9999 };
+        return { position: "fixed", bottom, left, zIndex: 9999 } as React.CSSProperties;
       })()
     : {};
 

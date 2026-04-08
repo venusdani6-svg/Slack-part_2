@@ -70,8 +70,8 @@ const MentionList = forwardRef<MentionListHandle, MentionListProps>(
     }
 
     return (
-      <div className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden min-w-[220px] max-h-[240px] overflow-y-auto">
-        {items.map((item, index) => (
+      <div className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden min-w-[220px] max-h-[240px] overflow-y-auto flex flex-col-reverse">
+        {[...items].reverse().map((item, reversedIndex) => { const index = items.length - 1 - reversedIndex; return (
           <button
             key={item.id}
             type="button"
@@ -105,7 +105,8 @@ const MentionList = forwardRef<MentionListHandle, MentionListProps>(
               )}
             </div>
           </button>
-        ))}
+          );
+        })}
       </div>
     );
   },

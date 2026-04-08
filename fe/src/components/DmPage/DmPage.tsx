@@ -237,7 +237,10 @@ export default function DmPage({ conversationId }: DmPageProps) {
     return (
         <div className="flex h-full">
             {/* Main DM chat area */}
-            {flag === "Threads" ? <div></div> :
+            {flag === "Directories" && <Directories />}
+            {flag === "Drafts % Sent" && <DraftsPage />}
+            {flag === "Huddles" && <HuddlePage />}
+            {(flag === "" || flag === "Threads") &&
                 <div className="flex flex-col flex-1 h-full bg-white min-w-0">
                     {/* Header */}
                     <div className="flex items-center gap-3 px-6 h-[49px] border-b border-gray-200 shrink-0">
