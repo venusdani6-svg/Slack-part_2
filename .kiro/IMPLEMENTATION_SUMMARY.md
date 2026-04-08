@@ -249,7 +249,7 @@ Enhanced `InvitePeopleModal` with email validation and dynamic button styling.
      if (!isEmailValid) return alert("Please enter a valid email!");
      
      try {
-       await fetch("http://192.168.137.106:5050/api/auth/invited-user", {
+       await fetch("http://192.168.137.98:5050/api/auth/invited-user", {
          method: "POST",
          headers: { "Content-Type": "application/json" },
          body: JSON.stringify({
