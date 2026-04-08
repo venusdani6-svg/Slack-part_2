@@ -69,7 +69,10 @@ export default function DmPage({ conversationId }: DmPageProps) {
             getDmConversations(workspaceId, user.id),
         ])
             .then(([msgs, convs]) => {
-                setMessages(msgs);
+                // Defensive: keep only root messages (parentId === null).
+                // The backend already filters this, but guard here too so
+                // thread replies never leak into the root DM list after rerender.
+                setMessages(msgs.filter((m) => m.parentId === null));
                 const found = convs.find((c) => c.id === conversationId) ?? null;
                 setConversation(found);
                 markDmConversationAsRead(workspaceId, conversationId, user.id).catch(() => { });

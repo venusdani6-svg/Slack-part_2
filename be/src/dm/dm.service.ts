@@ -5,7 +5,7 @@ import {
     ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, IsNull } from 'typeorm';
 import { DmConversation } from './entities/dm-conversation.entity';
 import { DmParticipant } from './entities/dm-participant.entity';
 import { DmMessage } from './entities/dm-message.entity';
@@ -124,7 +124,7 @@ export class DmService {
         const result = await Promise.all(
             conversations.map(async (conv) => {
                 const latestMessage = await this.messageRepo.findOne({
-                    where: { conversationId: conv.id, parentId: null as any },
+                    where: { conversationId: conv.id, parentId: IsNull() },
                     order: { createdAt: 'DESC' },
                     relations: ['sender'],
                 });
@@ -139,7 +139,7 @@ export class DmService {
                     unreadCount = await this.messageRepo.count({
                         where: {
                             conversationId: conv.id,
-                            parentId: null as any,
+                            parentId: IsNull(),
                         },
                     }).then(async () => {
                         // Count messages newer than lastReadAt that were NOT sent by current user
@@ -147,7 +147,7 @@ export class DmService {
                         return this.messageRepo.count({
                             where: {
                                 conversationId: conv.id,
-                                parentId: null as any,
+                                parentId: IsNull(),
                                 createdAt: MoreThan(since),
                             },
                         });
@@ -159,7 +159,7 @@ export class DmService {
                             where: {
                                 conversationId: conv.id,
                                 senderId: currentUserId,
-                                parentId: null as any,
+                                parentId: IsNull(),
                                 createdAt: MoreThan(since),
                             },
                         });
@@ -216,7 +216,7 @@ export class DmService {
         await this.assertParticipant(conversationId, currentUserId);
 
         const messages = await this.messageRepo.find({
-            where: { conversationId, parentId: null as any },
+            where: { conversationId, parentId: IsNull() },
             order: { createdAt: 'ASC' },
             relations: ['sender', 'reactions', 'reactions.users'],
         });
