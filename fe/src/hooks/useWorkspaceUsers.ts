@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { useDirectoryStore } from "@/store/directory-store";
 import type { DirectoryUser } from "@/lib/mapArchiveUser";
+import { useState } from "react";
 
 export type { DirectoryUser };
 export type UpdatePayload = Pick<DirectoryUser, "name" | "title" | "role" | "status">;
 
 export function useWorkspaceUsers(workspaceId: string | undefined) {
-    const [users, setUsers] = useState<DirectoryUser[]>([]);
+    const { setUsers, patchUser, users, orderedIds } = useDirectoryStore();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -27,31 +29,31 @@ export function useWorkspaceUsers(workspaceId: string | undefined) {
                 return res.json() as Promise<DirectoryUser[]>;
             })
             .then((data) => {
-                if (!cancelled) setUsers(Array.isArray(data) ? data : []);
+                if (!cancelled) {
+                    // Seed the global store — single source of truth
+                    setUsers(Array.isArray(data) ? data : []);
+                }
             })
             .catch((err: Error) => {
                 if (!cancelled) setError(err.message ?? "Failed to load users");
-                if (!cancelled) setUsers([]);
             })
             .finally(() => {
                 if (!cancelled) setLoading(false);
             });
 
         return () => { cancelled = true; };
-    }, [workspaceId]);
+    }, [workspaceId, setUsers]);
 
     /**
-     * Optimistic update: patch local state immediately,
-     * call PUT /api/users/:id, reconcile or rollback.
+     * Optimistic update: patch store immediately, call API, reconcile or rollback.
      */
     const updateUser = useCallback(
         async (userId: string, patch: UpdatePayload) => {
-            const snapshot = users;
+            // 1. Snapshot for rollback
+            const snapshot = useDirectoryStore.getState().users[userId];
 
-            // 1. Optimistic
-            setUsers((prev) =>
-                prev.map((u) => (u.id === userId ? { ...u, ...patch } : u))
-            );
+            // 2. Optimistic — update store instantly
+            patchUser(userId, patch);
 
             try {
                 const res = await fetch(`/api/users/${userId}`, {
@@ -63,17 +65,18 @@ export function useWorkspaceUsers(workspaceId: string | undefined) {
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
                 const updated: DirectoryUser = await res.json();
-                // 2. Reconcile with server response
-                setUsers((prev) =>
-                    prev.map((u) => (u.id === userId ? updated : u))
-                );
+                // 3. Reconcile with server response
+                patchUser(userId, updated);
             } catch {
-                // 3. Rollback
-                setUsers(snapshot);
+                // 4. Rollback
+                if (snapshot) patchUser(userId, snapshot);
             }
         },
-        [users]
+        [patchUser]
     );
 
-    return { users, loading, error, updateUser };
+    // Derive ordered user list from store
+    const userList = orderedIds.map((id) => users[id]).filter(Boolean) as DirectoryUser[];
+
+    return { users: userList, loading, error, updateUser };
 }
