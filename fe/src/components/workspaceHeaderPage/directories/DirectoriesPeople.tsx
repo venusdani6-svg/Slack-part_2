@@ -5,11 +5,12 @@ import CustomButton from "../component/channel_button";
 import FileSearch from "../component/file_search";
 import Card from "./directories_card";
 import DirectoriesDropdownBtn from "./DirectoriesDropdownBtn";
-import EditUserModal from "./EditUserModal";
 import ViewProfileModal from "./ViewProfileModal";
 import { useWorkspaceUsers, type DirectoryUser } from "@/hooks/useWorkspaceUsers";
+import { useDirectoryStore } from "@/store/directory-store";
 import { useAuth } from "@/context/Authcontext";
 import { People } from "./domi";
+import ProfileSidebar from "@/components/WorkSpace/ProfileSidebar";
 
 function SkeletonCard() {
   return (
@@ -28,10 +29,19 @@ type Props = {
 };
 
 export default function DirectoriesPeople({ workspaceId }: Props) {
-  const { users, loading, error, updateUser } = useWorkspaceUsers(workspaceId);
+  // Seeds the directory store; Cards read directly from the store
+  const { loading, error } = useWorkspaceUsers(workspaceId);
+  const orderedIds = useDirectoryStore((s) => s.orderedIds);
+  const storeUsers = useDirectoryStore((s) => s.users);
+
   const { user: authUser } = useAuth();
   const currentUserId = authUser?.id ?? null;
 
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<DirectoryUser | null>(null);
+  const [viewOpen, setViewOpen] = useState(false);
+
+  // Search with 300ms debounce
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,29 +52,31 @@ export default function DirectoriesPeople({ workspaceId }: Props) {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]);
 
-  const [selectedUser, setSelectedUser] = useState<DirectoryUser | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
+  // Filter against live store data — always reflects latest names
+  const filteredIds = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
+    if (!q) return orderedIds;
+    return orderedIds.filter((id) => {
+      const u = storeUsers[id];
+      if (!u) return false;
+      return (
+        u.name.toLowerCase().includes(q) ||
+        u.title.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q)
+      );
+    });
+  }, [orderedIds, storeUsers, debouncedSearch]);
 
-  function handleCardClick(user: DirectoryUser) {
-    setSelectedUser(user);
-    if (user.id === currentUserId) {
-      setEditOpen(true);
+  function handleCardClick(userId: string) {
+    const u = useDirectoryStore.getState().users[userId];
+    if (!u) return;
+    setSelectedUser(u);
+    if (userId === currentUserId) {
+      setProfileOpen(true);
     } else {
       setViewOpen(true);
     }
   }
-
-  const filteredData = useMemo(() => {
-    const q = debouncedSearch.toLowerCase();
-    if (!q) return users;
-    return users.filter(
-      (u) =>
-        u.name.toLowerCase().includes(q) ||
-        u.title.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q)
-    );
-  }, [users, debouncedSearch]);
 
   return (
     <>
@@ -133,7 +145,7 @@ export default function DirectoriesPeople({ workspaceId }: Props) {
         <div className="max-w-[100%] grid grid-cols-5 gap-[20px]">
           {loading && Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}
 
-          {!loading && filteredData.length === 0 && (
+          {!loading && filteredIds.length === 0 && (
             <div className="col-span-5 flex flex-col items-center justify-center py-[60px] text-center">
               <svg viewBox="0 0 64 64" className="w-[48px] h-[48px] mb-[12px] text-[#d1d5db]" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="32" cy="22" r="12" />
@@ -144,35 +156,35 @@ export default function DirectoriesPeople({ workspaceId }: Props) {
             </div>
           )}
 
-          {!loading && filteredData.map((user, i) => (
+          {!loading && filteredIds.map((userId) => (
             <Card
-              key={user.id || i}
-              head={user.name}
-              text={user.title}
-              avatar={user.avatar}
-              status={user.status ?? "online"}
-              isCurrentUser={user.id === currentUserId}
-              onClick={() => handleCardClick(user)}
-              onEdit={(e) => { e.stopPropagation(); setSelectedUser(user); setEditOpen(true); }}
+              key={userId}
+              userId={userId}
+              isCurrentUser={userId === currentUserId}
+              onClick={() => handleCardClick(userId)}
+              onEdit={(e) => {
+                e.stopPropagation();
+                const u = useDirectoryStore.getState().users[userId];
+                if (u) { setSelectedUser(u); setProfileOpen(true); }
+              }}
             />
           ))}
         </div>
       </div>
 
-      {editOpen && selectedUser && (
-        <EditUserModal
-          user={selectedUser}
-          onSave={updateUser}
-          onClose={() => { setEditOpen(false); setSelectedUser(null); }}
-        />
-      )}
-
       {viewOpen && selectedUser && (
         <ViewProfileModal
           user={selectedUser}
+          avater={selectedUser.avatar}
           onClose={() => { setViewOpen(false); setSelectedUser(null); }}
         />
       )}
+
+      <ProfileSidebar
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        userdata={authUser}
+      />
     </>
   );
 }
