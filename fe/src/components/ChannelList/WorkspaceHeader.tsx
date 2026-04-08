@@ -28,17 +28,20 @@ export default function WorkspaceHeader() {
 
   return (
     <div className="py-3 border-b border-white/10">
-      <div className="flex items-center justify-between">
-        <h1 className="font-bold text-[25px] p-1 px-2 rounded cursor-pointer hover:bg-white/10">
-          {workspaceName}
-        </h1>
+      <div className="flex items-center justify-between ">
+        <div className="flex items-center hover:bg-white/10 rounded-md px-2">
+          <h1 className="font-bold text-[25px] px-2 rounded cursor-pointer ">
+            {workspaceName}
+          </h1>
+          <p>˅</p>
+        </div>
 
         <div className="flex gap-2">
-          <button className="p-1 border border-white/20 rounded-sm">
+          <button className="p-1 rounded-sm hover:bg-white/10 px-2 cursor-pointer">
             <FiSettings />
           </button>
 
-          <button className="p-1 border border-white/20 rounded-sm">
+          <button className="p-1 rounded-sm hover:bg-white/10 px-2 cursor-pointer">
             <FiEdit />
           </button>
         </div>
