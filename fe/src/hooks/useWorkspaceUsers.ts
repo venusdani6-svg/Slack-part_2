@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { DirectoryUser } from "@/lib/mapArchiveUser";
 
 export type { DirectoryUser };
-export type UpdatePayload = Pick<DirectoryUser, "name" | "title" | "role">;
+export type UpdatePayload = Pick<DirectoryUser, "name" | "title" | "role" | "status">;
 
 export function useWorkspaceUsers(workspaceId: string | undefined) {
     const [users, setUsers] = useState<DirectoryUser[]>([]);
