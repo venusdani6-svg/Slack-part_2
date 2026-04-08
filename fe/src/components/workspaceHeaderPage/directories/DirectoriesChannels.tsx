@@ -7,6 +7,7 @@
 import CustomButton from "../component/channel_button";
 import FileSearch from "../component/file_search";
 import DirectoriesDropdownBtn from "./DirectoriesDropdownBtn";
+import { Channel } from "./domi";
 import { FiLock } from "react-icons/fi";
 import DirectoriesChannelsItem from "./DirectoriesChannelsItem";
 import BannerSection from "./BannerSection";
@@ -15,9 +16,8 @@ import { useAuth } from "@/context/Authcontext";
 import { useSocket } from "@/providers/SocketProvider";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { IconType } from "react-icons";
-
 export default function DirectoriesChannel() {
-      const { socket } = useSocket();
+          const { socket } = useSocket();
   const [channels, setChannels] = useState<any[]>([]);
 
   const workspaceId = useWorkspaceId();
@@ -32,8 +32,7 @@ export default function DirectoriesChannel() {
     members: ch.members?.length || 0,
     joined: ch.members?.some((m: any) => m.id === userId),
   });
-
-  useEffect(() => {
+   useEffect(() => {
       if (!socket || !workspaceId || !userId) return;
   
     //   setLoading(true);
@@ -91,6 +90,7 @@ export default function DirectoriesChannel() {
       };
     }, [socket, workspaceId, userId]); // ✅ FIXED: Added userId
   
+
     const [search, setSearch] = useState("");
 
     const filteredData = useMemo(() => {
@@ -106,7 +106,6 @@ export default function DirectoriesChannel() {
             });
         });
     }, [search, channels]);
-
     return (
         <div className="w-full h-full overflow-y-scroll">
             <div className="w-full px-[250px]  flex justify-between items-end mb-[20px]">
@@ -142,11 +141,8 @@ export default function DirectoriesChannel() {
                         <DirectoriesDropdownBtn>
                             <DirectoriesDropdownBtn.Trigger placeholder="All channels" />
                             <DirectoriesDropdownBtn.Content>
-                               {channels.map((item, i) => (
-                                <DirectoriesDropdownBtn.Radio
-                                    key={i}
-                                    label={item.label || item.title}
-                                />
+                                {Channel.Allchannels.map((item, i) => (
+                                    <DirectoriesDropdownBtn.Radio key={i} label={item.label} />
                                 ))}
                             </DirectoriesDropdownBtn.Content>
                         </DirectoriesDropdownBtn>
@@ -154,11 +150,12 @@ export default function DirectoriesChannel() {
                         <DirectoriesDropdownBtn>
                             <DirectoriesDropdownBtn.Trigger placeholder="Any channel type" />
                             <DirectoriesDropdownBtn.Content>
-                               {channels.map((item, i) => (
-                                <DirectoriesDropdownBtn.Radio
-                                    key={i}
-                                    label={item.label || item.title}
-                                />
+                                {Channel.anychanneltype.map((item, i) => (
+                                    <DirectoriesDropdownBtn.Radio
+                                        key={i}
+                                        label={item.label}
+                                        icon={item.icon}
+                                    />
                                 ))}
                             </DirectoriesDropdownBtn.Content>
                         </DirectoriesDropdownBtn>
@@ -189,12 +186,8 @@ export default function DirectoriesChannel() {
                     <DirectoriesDropdownBtn>
                         <DirectoriesDropdownBtn.Trigger placeholder="Most recommended" />
                         <DirectoriesDropdownBtn.Content>
-                           {channels.map((item, i) => (
-                            <DirectoriesDropdownBtn.Radio
-                                key={i}
-                                label={item.label || item.title}
-                                icon={item.icon as IconType}
-                            />
+                            {Channel.Mostrecommended.map((item, i) => (
+                                <DirectoriesDropdownBtn.Radio key={i} label={item.label} />
                             ))}
                         </DirectoriesDropdownBtn.Content>
                     </DirectoriesDropdownBtn>
@@ -216,15 +209,3 @@ export default function DirectoriesChannel() {
         </div>
     );
 }
-
-
-
-// function setLoading(arg0: boolean) {
-//     throw new Error("Function not implemented.");
-// }
-// function setLoading(arg0: boolean) {
-//     throw new Error("Function not implemented.");
-// }
-// function setLoading(arg0: boolean) {
-//     throw new Error("Function not implemented.");
-// }
