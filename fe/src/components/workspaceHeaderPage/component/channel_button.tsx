@@ -17,6 +17,7 @@ type ButtonProps = {
   radius?: string;
   showIcon?: boolean;
   icon?: IconType;
+   suffix?: React.ReactNode;
 };
 
 export default function CustomButton({
@@ -27,7 +28,6 @@ export default function CustomButton({
   hoverColor = "hover:bg-[#148567]",
   activeColor = "active:bg-[#006644]",
   textColor = "text-[#ffffff]",
-  width = "w-[28px]",
   height = "h-[32px]",
   paddingX = "px-[12px]",
   radius = "rounded-[6px]",

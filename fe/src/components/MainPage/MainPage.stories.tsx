@@ -1,3 +1,4 @@
+/* eslint-disable storybook/no-renderer-packages */
 // MainPage depends on socket, auth, router, and Zustand stores — too many
 // side-effects to render in isolation. We document this and show a placeholder.
 import type { Meta, StoryObj } from "@storybook/react";

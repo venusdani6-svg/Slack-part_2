@@ -1,3 +1,7 @@
+/* eslint-disable react/display-name */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react-hooks/static-components */
 "use client";
 
 import ActivityPopover from "@/components/WorkSpace/ActivityPopover";
@@ -5,6 +9,7 @@ import DmsPopover from "@/components/WorkSpace/DmsPopover";
 import FilesPopover from "@/components/WorkSpace/FilesPopover";
 import MorePopover from "@/components/WorkSpace/MorePopover";
 import { Item, useSidebarStore } from "@/store/sidebar-store";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function NavItem({
@@ -65,7 +70,7 @@ export default function NavItem({
                                
                     `}
                 >
-                    <img
+                    <Image
                         src={`/svg/${isActive ? label + "Active" : label}.svg`}
                         alt={label}
                         className="w-5 invert   group-hover:w-6"

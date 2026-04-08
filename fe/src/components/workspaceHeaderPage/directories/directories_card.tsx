@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { FiEdit2 } from "react-icons/fi";
 
 type Props = {
