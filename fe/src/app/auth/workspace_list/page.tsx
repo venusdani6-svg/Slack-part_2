@@ -171,7 +171,9 @@ export default function WorkspacesPage() {
       <div className="relative bg-[#481a54] text-white text-center pt-20 pb-40">
         <div className="bg-[#481a54] w-full h-[150px] absolute bottom-[-75px] rounded-[50%]" />
         <div className="relative z-10">
-          <h1 className="text-5xl font-bold mb-4">Welcome back 👋</h1>
+          <h1 className="text-5xl font-bold mb-4 flex items-center justify-center gap-2">Welcome back 
+            <img src="/waving-hand.gif" alt="hand" />
+          </h1>
           <p className="text-lg text-white/90">
             Choose a workspace to get started.
           </p>

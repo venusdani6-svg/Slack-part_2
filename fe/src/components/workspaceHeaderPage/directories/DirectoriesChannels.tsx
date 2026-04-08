@@ -1,6 +1,9 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+ 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo } from "react";
 import CustomButton from "../component/channel_button";
 import FileSearch from "../component/file_search";
 import DirectoriesDropdownBtn from "./DirectoriesDropdownBtn";
@@ -8,14 +11,92 @@ import { Channel } from "./domi";
 import { FiLock } from "react-icons/fi";
 import DirectoriesChannelsItem from "./DirectoriesChannelsItem";
 import BannerSection from "./BannerSection";
-
+import { useEffect, useState, useCallback, useMemo, Key } from "react";
+import { useAuth } from "@/context/Authcontext";
+import { useSocket } from "@/providers/SocketProvider";
+import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import { IconType } from "react-icons";
 export default function DirectoriesChannel() {
+          const { socket } = useSocket();
+  const [channels, setChannels] = useState<any[]>([]);
+
+  const workspaceId = useWorkspaceId();
+  const { user } = useAuth();
+  const userId = user?.id;
+
+    const normalizeChannel = (ch: any) => ({
+    id: ch.id,
+    title: ch.name,
+    label: ch.name,
+    comment: ch.channelType,
+    members: ch.members?.length || 0,
+    joined: ch.members?.some((m: any) => m.id === userId),
+  });
+   useEffect(() => {
+      if (!socket || !workspaceId || !userId) return;
+  
+    //   setLoading(true);
+    if (!socket.connected) socket.connect();
+      // JOIN ROOM
+      socket.emit("join_workspace", { workspaceId });
+  
+      // REQUEST CHANNEL LIST with userId for proper filtering
+      socket.emit("channel:list", { workspaceId, userId });
+  
+      // LISTENER: LIST
+      const handleList = (data: any[]) => {
+        setChannels(data.map(normalizeChannel));
+        // setLoading(false);
+      };
+  
+      // LISTENER: CREATE — immediately add new channel to state
+      const handleCreated = (newChannel: any) => {
+        const normalized = normalizeChannel(newChannel);
+
+        setChannels((prev) =>
+        prev.find((c) => c.id === normalized.id)
+          ? prev
+          : [...prev, normalized]
+      );
+    };
+  
+      // LISTENER: DELETE
+      const handleDeleted = ({ channelId }: { channelId: string }) => {
+        setChannels((prev) =>
+          prev.filter((c) => c.id !== channelId)
+        );
+      };
+  
+      // LISTENER: UPDATE
+      const handleUpdated = (updatedChannel: any) => {
+        const normalized = normalizeChannel(updatedChannel);
+
+      setChannels((prev) =>
+        prev.map((c) => (c.id === normalized.id ? normalized : c))
+      );
+    };
+  
+      socket.on("channel:list", handleList);
+      socket.on("channel:created", handleCreated);
+      socket.on("channel:deleted", handleDeleted);
+      socket.on("channel:updated", handleUpdated);
+  
+      // ✅ CLEANUP (VERY IMPORTANT)
+      return () => {
+        socket.off("channel:list", handleList);
+        socket.off("channel:created", handleCreated);
+        socket.off("channel:deleted", handleDeleted);
+        socket.off("channel:updated", handleUpdated);
+      };
+    }, [socket, workspaceId, userId]); // ✅ FIXED: Added userId
+  
+
     const [search, setSearch] = useState("");
 
     const filteredData = useMemo(() => {
         const q = search.toLowerCase();
 
-        return Channel.data.filter((item) => {
+        return channels.filter((item) => {
             return Object.entries(item).some(([key, val]) => {
                 let searchable = String(val).toLowerCase();
                 if (key === "joined") {
@@ -24,9 +105,9 @@ export default function DirectoriesChannel() {
                 return `${key} ${searchable}`.includes(q);
             });
         });
-    }, [search]);
+    }, [search, channels]);
     return (
-        <div className="w-ull h-full overflow-y-scroll">
+        <div className="w-full h-full overflow-y-scroll">
             <div className="w-full px-[250px]  flex justify-between items-end mb-[20px]">
                 <div className="w-[667px]">
                     <FileSearch
