@@ -1,160 +1,181 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Channel } from './entities/channel.entity';
 import { Repository } from 'typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { Workspace } from 'src/workspace/entities/workspace.entity';
 import { ChannelType } from './dto/create-channel.dto';
+import { ChannelGateway } from './view/channel.gateway';
 
 @Injectable()
 export class ChannelService {
-    constructor(
-        @InjectRepository(Channel)
-        private channelRepo: Repository<Channel>,
+  constructor(
+    @InjectRepository(Channel)
+    private channelRepo: Repository<Channel>,
 
-        @InjectRepository(User)
-        private userRepo: Repository<User>,
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
 
-        @InjectRepository(Workspace)
-        private workspaceRepo: Repository<Workspace>,
-    ) { }
+    @InjectRepository(Workspace)
+    private workspaceRepo: Repository<Workspace>,
+    private channelGateway: ChannelGateway, // ✅ Inject it
+  ) {}
+  async updateChannel(payload: {
+    channelId: string;
+    name?: string;
+    type?: ChannelType;
+    userId: string;
+  }) {
+    const { channelId, name, type, userId } = payload;
 
-    async updateChannel(payload: {
-        channelId: string;
-        name?: string;
-        type?: ChannelType;
-        userId: string;
-    }) {
-        const { channelId, name, type, userId } = payload;
+    const channel = await this.channelRepo.findOne({
+      where: { id: channelId },
+    });
 
-        const channel = await this.channelRepo.findOne({
-            where: { id: channelId },
-        });
-
-        if (!channel) {
-            throw new NotFoundException('Channel not found');
-        }
-
-        if (channel.creatorId && channel.creatorId !== userId) {
-            throw new ForbiddenException('You can only edit channels you created');
-        }
-
-        if (name) channel.name = name;
-        if (type) channel.channelType = type;
-
-        return await this.channelRepo.save(channel);
+    if (!channel) {
+      throw new NotFoundException('Channel not found');
     }
 
-    async joinChannel(channelId: string, userId: string) {
-        const channel = await this.channelRepo.findOne({
-            where: { id: channelId },
-            relations: ['members'],
-        });
-
-        if (!channel) throw new NotFoundException('Channel not found');
-
-        const user = await this.userRepo.findOne({
-            where: { id: userId },
-        });
-        if (!user) throw new NotFoundException('User not found');
-        if (!channel.members) { channel.members = []; }
-        if (!channel.members.find(m => m.id === user.id)) {
-            channel.members.push(user);
-        }
-
-        return this.channelRepo.save(channel);
+    if (channel.creatorId && channel.creatorId !== userId) {
+      throw new ForbiddenException('You can only edit channels you created');
     }
 
-    async getChannels(workspaceId: string) {
-        if (!workspaceId) {
-            throw new BadRequestException('workspaceId is required');
-        }
+    if (name) channel.name = name;
+    if (type) channel.channelType = type;
 
-        const channels = await this.channelRepo.find({
-            where: { workspace: { id: workspaceId } },
-            relations: ['members'],
-        });
+    return await this.channelRepo.save(channel);
+  }
 
-        return channels;
+  async joinChannel(channelId: string, userId: string) {
+    const channel = await this.channelRepo.findOne({
+      where: { id: channelId },
+      relations: ['members'],
+    });
+
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!channel.members) {
+      channel.members = [];
+    }
+    if (!channel.members.find((m) => m.id === user.id)) {
+      channel.members.push(user);
     }
 
+    const updatedChannel = await this.channelRepo.save(channel);
+    console.log(updatedChannel);
+    // ✅ Emit channel update to frontend
+    this.channelGateway.emitChannelUpdated(updatedChannel);
 
-    async createChannel(data: {
-        name: string;
-        workspaceId: string;
-        userId: string;
-        type: ChannelType;
-    }) {
-        const { name, workspaceId, userId, type } = data;
+    return updatedChannel;
+  }
 
-        if (!name || !workspaceId || !userId || !type) {
-            throw new BadRequestException('Missing required fields');
-        }
-
-        // find workspace
-        const workspace = await this.workspaceRepo.findOne({
-            where: { id: workspaceId },
-        });
-
-        if (!workspace) {
-            throw new NotFoundException('Workspace not found');
-        }
-
-        //  find user
-        const user = await this.userRepo.findOne({
-            where: { id: userId },
-        });
-
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
-
-        // check duplicate channel name (optional but important)
-        const existing = await this.channelRepo.findOne({
-            where: {
-                name,
-                workspace: { id: workspaceId },
-            },
-        });
-
-        if (existing) {
-            throw new BadRequestException('Channel already exists');
-        }
-
-        // create channel
-        const channel = this.channelRepo.create({
-            name,
-            workspace,
-            channelType: type,
-            creatorId: userId,
-            members: type === 'private' ? [user] : [],
-        });
-
-        return await this.channelRepo.save(channel);
+  async getChannels(workspaceId: string) {
+    if (!workspaceId) {
+      throw new BadRequestException('workspaceId is required');
     }
 
-    async getChannelById(channelId: string) {
-        const channel = await this.channelRepo.findOne({
-            where: { id: channelId },
-            relations: ['members'],
-        });
-        if (!channel) throw new NotFoundException('Channel not found');
-        return channel;
+    const channels = await this.channelRepo.find({
+      where: { workspace: { id: workspaceId } },
+      relations: ['members'],
+    });
+
+    return channels;
+  }
+
+  async createChannel(data: {
+    name: string;
+    workspaceId: string;
+    userId: string;
+    type: ChannelType;
+  }) {
+    const { name, workspaceId, userId, type } = data;
+
+    if (!name || !workspaceId || !userId || !type) {
+      throw new BadRequestException('Missing required fields');
     }
 
-    async deleteChannel(channelId: string, userId: string) {
-        const channel = await this.channelRepo.findOne({
-            where: { id: channelId },
-        });
+    // find workspace
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
 
-        if (!channel) throw new NotFoundException('Channel not found');
-
-        if (channel.creatorId && channel.creatorId !== userId) {
-            throw new ForbiddenException('You can only delete channels you created');
-        }
-
-        await this.channelRepo.delete(channelId);
-        return { id: channelId };
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
     }
+
+    //  find user
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // check duplicate channel name (optional but important)
+    const existing = await this.channelRepo.findOne({
+      where: {
+        name,
+        workspace: { id: workspaceId },
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Channel already exists');
+    }
+
+    // create channel
+    const channel = this.channelRepo.create({
+      name,
+      workspace,
+      channelType: type,
+      creatorId: userId,
+      members: type === 'private' ? [user] : [],
+    });
+
+    const savedChannel = await this.channelRepo.save(channel);
+    console.log(savedChannel);
+    // ✅ Emit channel creation to frontend
+    this.channelGateway.emitChannelCreated(savedChannel);
+
+    return savedChannel;
+  }
+
+  async getChannelById(channelId: string) {
+    const channel = await this.channelRepo.findOne({
+      where: { id: channelId },
+      relations: ['members'],
+    });
+    if (!channel) throw new NotFoundException('Channel not found');
+    return channel;
+  }
+
+  async deleteChannel(channelId: string, userId: string) {
+    const channel = await this.channelRepo.findOne({
+      where: { id: channelId },
+    });
+
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    if (channel.creatorId && channel.creatorId !== userId) {
+      throw new ForbiddenException('You can only delete channels you created');
+    }
+
+    await this.channelRepo.delete(channelId);
+    console.log(this.channelRepo.delete(channelId));
+    // ✅ Emit channel deletion to frontend
+    this.channelGateway.emitChannelDeleted(channelId);
+
+    return { id: channelId };
+  }
 }
-

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable react/display-name */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -70,8 +71,8 @@ export default function NavItem({
                                
                     `}
                 >
-                    <Image
-                        src={svg/${isActive ? label + "Active" : label}.svg}
+                    <img
+                        src={`svg/${isActive ? label + "Active" : label}.svg`}
                         alt={label}
                         className="w-5 invert   group-hover:w-6"
                     />

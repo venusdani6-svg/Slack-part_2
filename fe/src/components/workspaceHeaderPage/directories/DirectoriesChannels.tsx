@@ -1,16 +1,48 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { io, Socket } from "socket.io-client";
 import CustomButton from "../component/channel_button";
 import FileSearch from "../component/file_search";
 import DirectoriesDropdownBtn from "./DirectoriesDropdownBtn";
-import { Channel } from "./domi";
 import { FiLock } from "react-icons/fi";
 import DirectoriesChannelsItem from "./DirectoriesChannelsItem";
 import BannerSection from "./BannerSection";
 
+interface ChannelData {
+  id: string;
+  title: string;
+  comment?: string;
+  members: number;
+  joined: boolean;
+}
+
 export default function DirectoriesChannel() {
     const [search, setSearch] = useState("");
+const [channels, setChannels] = useState<ChannelData[]>([]);
+
+ useEffect(() => {
+    const socket: Socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000");
+
+    // Receive updated channel list
+    socket.on("channelCreated", (newChannel: ChannelData) => {
+      setChannels((prev) => [...prev, newChannel]);
+    });
+
+    socket.on("channelUpdated", (updatedChannel: ChannelData) => {
+      setChannels((prev) =>
+        prev.map((ch) => (ch.id === updatedChannel.id ? updatedChannel : ch))
+      );
+    });
+
+    socket.on("channelDeleted", (deletedId: string) => {
+      setChannels((prev) => prev.filter((ch) => ch.id !== deletedId));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
     const filteredData = useMemo(() => {
         const q = search.toLowerCase();
@@ -24,7 +56,7 @@ export default function DirectoriesChannel() {
                 return `${key} ${searchable}`.includes(q);
             });
         });
-    }, [search]);
+    }, [search, channels]);
     return (
         <div className="w-ull h-full overflow-y-scroll">
             <div className="w-full px-[250px]  flex justify-between items-end mb-[20px]">
@@ -51,7 +83,7 @@ export default function DirectoriesChannel() {
                         </span>
                     }
                 />
-             
+         
             </div>
             <BannerSection />
             <div className="h-[calc(100vh-250px)] flex flex-col items-center min-h-[60vh] sidebar-scroll">

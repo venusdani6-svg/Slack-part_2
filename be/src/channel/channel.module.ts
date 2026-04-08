@@ -9,8 +9,8 @@ import { ChannelController } from './view/channel.controller';
 import { ChannelGateway } from './view/channel.gateway';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Channel, User, Workspace])],
-    controllers: [ChannelController],
-    providers: [ChannelService, ChannelPresenter, ChannelGateway],
+  imports: [TypeOrmModule.forFeature([Channel, User, Workspace])],
+  controllers: [ChannelController],
+  providers: [ChannelService, ChannelPresenter, ChannelGateway],
 })
 export class ChannelModule {}

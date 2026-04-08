@@ -17,34 +17,34 @@ import { Message } from 'src/message/model/message.entity';
 @Entity()
 export class Channel {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   // workspace (one-to-many)
   @ManyToOne(() => Workspace, (workspace) => workspace.channels, {
     onDelete: 'CASCADE',
   })
   // @JoinColumn({ name: "workspaceId" })
-  workspace: Workspace;
+  workspace!: Workspace;
 
   @Column()
-  workspaceId: string;
+  workspaceId!: string;
 
   @Column({ type: 'enum', enum: ChannelType, default: ChannelType.PUBLIC })
-  channelType: ChannelType;
+  channelType!: ChannelType;
 
   /** The user who created this channel — used for ownership checks on edit/delete */
   @Column({ nullable: true })
-  creatorId: string;
+  creatorId!: string;
 
   // privacy channel members (many-to-many)
   @ManyToMany(() => User, (user) => user.channels)
   @JoinTable()
-  members: User[];
+  members!: User[];
 
   // inside Channel class
   @OneToMany(() => Message, (message) => message.channel)
-  messages: Message[];
+  messages!: Message[];
 }

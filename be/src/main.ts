@@ -9,22 +9,22 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: ["http://localhost:3000",
-    'http://192.168.137.98:3000'],
-    
+    origin: ['http://localhost:3000', 'http://192.168.137.46:3000'],
     credentials: true,
   });
 
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
-  
-  const port = process.env.PORT ?? 5050;
+
+  const port = process.env.PORT ?? 4000;
   app.setGlobalPrefix('api');
   await app.listen(port);
   app.useGlobalPipes(new ValidationPipe());
-  
 
   const logger = new Logger('Bootstrap');
   logger.log(`Server is running on http://localhost:${port}`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('❌ App failed to start:', err);
+  process.exit(1);
+});
