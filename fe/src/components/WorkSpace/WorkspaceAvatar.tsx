@@ -47,9 +47,9 @@ export default function WorkspaceAvatar(props: { userData: any }) {
             {/* Avatar trigger — shows first letter of current workspace name */}
             <div
                 onClick={() => setOpen((prev) => !prev)}
-                className="w-10 h-10 rounded-xl bg-[#867688] flex items-center justify-center text-white text-[18px] font-semibold cursor-pointer hover:brightness-110 transition select-none"
+                className="w-10 h-10 rounded-xl bg-[#bab4bb] flex items-center justify-center text-[#000000] text-[18px] font-semibold cursor-pointer hover:brightness-110 transition select-none"
             >
-                {workspace_name ? workspace_name.charAt(0).toUpperCase() : "?"}
+                {workspace_name ? workspace_name.charAt(0).toUpperCase() : "?"} 
             </div>
 
             {/* Dropdown */}
