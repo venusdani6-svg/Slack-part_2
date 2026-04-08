@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/Authcontext";
 import { getDmConversations, DmConversationItem } from "@/lib/api/dm";
 import { usePresenceStore, presenceColor } from "@/store/presence-store";
+import { useSocket } from "@/providers/SocketProvider";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiPlus } from "react-icons/fi";
@@ -16,11 +17,11 @@ export default function DMList() {
     const { user } = useAuth();
     const router = useRouter();
     const workspaceId = useWorkspaceId();
+    const { socket } = useSocket();
 
     const [conversations, setConversations] = useState<DmConversationItem[]>([]);
     const [showModal, setShowModal] = useState(false);
 
-    // Shared presence store — same source of truth as WorkspaceMenu
     const { setFlag, flag } = useMessageStore();
     const { isOnline } = usePresenceStore();
 
@@ -35,6 +36,35 @@ export default function DMList() {
         loadConversations();
     }, [workspaceId, user?.id]);
 
+    // Real-time avatar/dispname updates from profile changes
+    useEffect(() => {
+        if (!socket) return;
+
+        const onProfileUpdated = (data: { userId?: string; id?: string; dispname?: string; avatar?: string }) => {
+            const updatedUserId = data?.userId ?? data?.id;
+            if (!updatedUserId || !data.avatar) return;
+
+            setConversations((prev) =>
+                prev.map((conv) => {
+                    if (conv.otherUser?.id !== updatedUserId) return conv;
+                    return {
+                        ...conv,
+                        otherUser: {
+                            ...conv.otherUser,
+                            avatar: data.avatar ?? conv.otherUser.avatar,
+                            dispname: data.dispname ?? conv.otherUser.dispname,
+                        },
+                    };
+                }),
+            );
+        };
+
+        socket.on("updated_profile", onProfileUpdated);
+        return () => {
+            socket.off("updated_profile", onProfileUpdated);
+        };
+    }, [socket]);
+
     const getAvatarUrlForConv = (avatar: string | undefined) =>
         getAvatarUrl(avatar);
 
@@ -46,10 +76,10 @@ export default function DMList() {
         loadConversations();
     };
 
-    const pageNation = (id:string) => {
-        router.push(`/${workspaceId}/dm/${id}`)
-        setFlag("")
-    }
+    const pageNation = (id: string) => {
+        router.push(`/${workspaceId}/dm/${id}`);
+        setFlag("");
+    };
 
     return (
         <>
@@ -83,7 +113,7 @@ export default function DMList() {
                                         alt={getDisplayNameForConv(conv)}
                                         className="w-5 h-5 rounded"
                                     />
-                                    {/* Presence dot — green = joined, #3F0E40 = unjoined */}
+                                    {/* Presence dot */}
                                     <span
                                         className={`absolute bottom-[-1px] right-[-1px] w-2 h-2 rounded-full border border-[rgb(92,42,92)] ${presenceColor(online)}`}
                                     />

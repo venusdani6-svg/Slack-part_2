@@ -9,6 +9,8 @@ import {
   FiSearch,
 } from "react-icons/fi";
 import SearchBox from "./SearchBox";
+import TopBarIcon from "./Botimg";
+
 // import SearchModal from "./SearchModal";
 
 export default function TopBar() {
@@ -38,6 +40,8 @@ export default function TopBar() {
       </IconBtn>
     </div>
         <SearchBox />
+        <TopBarIcon />
+
       </div>
 
       {/* RIGHT */}
