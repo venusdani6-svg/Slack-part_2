@@ -86,7 +86,7 @@ export default function MainTopBar() {
         {isPrivate && members.length > 0 && (
           <div className="flex items-center">
             <div className="flex -space-x-1">
-              {visibleMembers.map((m) => (
+              {/* {visibleMembers.map((m) => (
                 <Tooltip key={m.id} text1={m.dispname} children={
                   <div className="w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center overflow-hidden shrink-0">
                     {m.avatar ? (
@@ -98,7 +98,7 @@ export default function MainTopBar() {
                     )}
                   </div>
                 } />
-              ))}
+              ))} */}
             </div>
             {extraCount > 0 && (
               <span className="ml-1 text-xs text-gray-500">+{extraCount} more</span>

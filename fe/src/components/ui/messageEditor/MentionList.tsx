@@ -63,7 +63,7 @@ const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 
     if (!items.length) {
       return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-sm text-gray-400 min-w-[220px]">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-sm text-gray-500 min-w-[220px]">
           No users found
         </div>
       );

@@ -82,10 +82,10 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
                     </h2>
 
                     <button
-                        className="text-gray-500 cursor-pointer hover:text-black"
+                        className="text-gray-500 cursor-pointer hover:text-[#f00]"
                         onClick={onClose}
                     >
-                        ?
+                        X
                     </button>
                 </div>
 
@@ -224,7 +224,7 @@ export default function InvitePeopleModal({ open, onClose }: Props) {
                     </button>
 
                     <button
-                        className={isEmailValid ? "h-[36px] px-4 rounded-md text-[14px] transition-colors bg-green-400 text-white hover:bg-green-500" : "h-[36px] px-4 rounded-md text-[14px] transition-colors bg-gray-200 text-gray-500"}
+                        className={isEmailValid ? "h-[36px] px-4 rounded-md text-[14px] transition-colors bg-[#1c73f4] text-white hover:bg-[#63a2ff]" : "h-[36px] px-4 rounded-md text-[14px] transition-colors bg-[#2e5ea7] text-[#dddbdb] hover:bg-[#f19e8e]"}
                         onClick={onSubmit}
                         disabled={!isEmailValid}
                     >
