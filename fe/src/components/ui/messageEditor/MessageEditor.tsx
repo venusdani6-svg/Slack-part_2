@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useSocket } from "@/providers/SocketProvider";
 import { getDmCandidates, DmCandidate } from "@/lib/api/dm";
@@ -77,6 +77,7 @@ export default function MessageEditor({
     rect: DOMRect;
   } | null>(null);
   const mentionListRef = useRef<MentionListHandle>(null);
+  const [mentionPopupHeight, setMentionPopupHeight] = useState(240);
 
   // ── Load workspace members ────────────────────────────────────────────────
   useEffect(() => {
@@ -367,35 +368,26 @@ export default function MessageEditor({
   // ── Mention popup position: 15px above the @ caret ───────────────────────
   // rect is the DOMRect of the @ character from Tiptap's clientRect callback.
   // We place the popup so its bottom edge is 15px above rect.top.
-  // If there isn't enough space above, fall back to below the caret.
+  // Mention popup position: 5px above the @ caret
   const mentionPopupStyle: React.CSSProperties = mentionPopup
     ? (() => {
         const { rect } = mentionPopup;
-        const POPUP_OFFSET = 15; // required: 15px above the @ location
-        const popupH = 240;
-        const popupW = 220;
-        const margin = 4; // minimum screen edge margin
-
-        // Bottom edge of popup = rect.top - POPUP_OFFSET
-        // So top of popup = rect.top - POPUP_OFFSET - popupH
+        const POPUP_OFFSET = 5;
+        const popupH = mentionPopupHeight;
+        const popupW = 320;
+        const margin = 4;
         const preferredTop = rect.top - POPUP_OFFSET - popupH;
-
         let top: number;
         if (preferredTop >= margin) {
-          // Enough space above — use the 15px-above position
           top = preferredTop;
         } else if (window.innerHeight - rect.bottom - POPUP_OFFSET >= popupH) {
-          // Not enough space above — fall back to below
           top = rect.bottom + POPUP_OFFSET;
         } else {
-          // Neither — clamp to top of viewport
           top = margin;
         }
-
         let left = rect.left;
         if (left + popupW > window.innerWidth - margin) left = window.innerWidth - popupW - margin;
         if (left < margin) left = margin;
-
         return { position: "fixed", top, left, zIndex: 9999 };
       })()
     : {};
