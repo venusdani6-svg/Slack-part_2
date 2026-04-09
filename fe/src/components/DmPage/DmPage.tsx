@@ -246,7 +246,7 @@ export default function DmPage({ conversationId }: DmPageProps) {
             {flag === "Huddles" && <HuddlePage />}
             {flag === "Threads" && <ThreadsPage />}
             {flag === "" &&
-                <div className="flex flex-col flex-1 h-full bg-white min-w-0">
+                <div className="flex flex-col flex-1 h-full bg-white w-full">
                     {/* Header */}
                     <div className="flex items-center gap-3 px-6 h-[49px] border-b border-gray-200 shrink-0">
                         <img src={otherUserAvatar} alt={otherUserName} className="w-7 h-7 rounded-lg" />

@@ -544,7 +544,7 @@ export default function ThreadsPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white">
+    <div className="h-full overflow-y-auto bg-white w-full">
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-3">
         <h2 className="text-lg font-bold text-gray-900">Threads</h2>
       </div>
