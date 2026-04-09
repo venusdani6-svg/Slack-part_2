@@ -6,8 +6,6 @@ import { HuddleHeroSection } from "./HuddleHeroSection";
 import { ChannelsSection } from "./ChannelsSection";
 import { FloatingActionButton } from "./FloatingActionButton";
 import { HuddlesHeader } from "./HuddleHeader";
-import DirectoriesDropdownBtn from "../directories/DirectoriesDropdownBtn";
-import { HuddlieBase } from "./huddleDomi";
 
 export default function HuddlePage() {
   const [showHero, setShowHero] = useState(true);
@@ -17,64 +15,35 @@ export default function HuddlePage() {
       className={`
           myHuddle
     h-full
-    w-[100%]
+    w-full sticky
     bg-[#ffffff]
-    overflow-y-auto
+  `}>
+      <div className="max-w-266 mx-auto px-12 pt-4.5 h-10 mb-4">
+        <HuddlesHeader />
+      </div>
+      <div className="w-full max-h-218 overflow-y-auto
     scrollbar-hidden
     sidebar-scroll
-    px-[0px]
-    min-w-[800px]
-    pt-[20px]
-    pb-[100px]
-  `}>
-      <div className="max-w-[1064px] mx-auto px-[48px] pt-[20px] pb-[100px]">
-
-        <HuddlesHeader />
-
+    px-0
+    min-w-200
+    pb-25">
+      
         {showHero && (
-          <div className="mt-[20px]">
+          <div className="mt-5">
             <HuddleHeroSection onClose={() => setShowHero(false)} />
           </div>
         )}
 
-        <div className={showHero ? "mt-[24px]" : "mt-[20px]"}>
+      <div className="max-w-266 mx-auto px-12 pt-5">
+
+        <div className={showHero ? "mt-3" : "mt-2"}>
           <DirectMessagesSection />
         </div>
-        <div className="w-[100%] mb-[20px] border-[#1f2937] flex items-center justify-between">
-          <div className="flex items-center gap-[8px]">
-            <DirectoriesDropdownBtn>
-              <DirectoriesDropdownBtn.Trigger placeholder="All channels" />
-              <DirectoriesDropdownBtn.Content>
-                {HuddlieBase.allHuddlies.map((item, i) => (
-                  <DirectoriesDropdownBtn.Radio key={i} label={item} />
-                ))}
-              </DirectoriesDropdownBtn.Content>
-            </DirectoriesDropdownBtn>
-
-            <DirectoriesDropdownBtn>
-              <DirectoriesDropdownBtn.Trigger placeholder="with" />
-              <DirectoriesDropdownBtn.Content>
-                <DirectoriesDropdownBtn.Search placeholder="Search..." />
-              </DirectoriesDropdownBtn.Content>
-            </DirectoriesDropdownBtn>
-
-            <DirectoriesDropdownBtn>
-              <DirectoriesDropdownBtn.Trigger placeholder="in" />
-              <DirectoriesDropdownBtn.Content>
-                <DirectoriesDropdownBtn.Search placeholder="Search..." />
-                <DirectoriesDropdownBtn.Radio label="Workspaces" />
-              </DirectoriesDropdownBtn.Content>
-            </DirectoriesDropdownBtn>
-          </div>
-
-
-        </div>
-        <div className="mt-[28px]">
+        <div className="mt-1">
           <ChannelsSection />
         </div>
-
       </div>
-
+      </div>
       <FloatingActionButton />
     </div>
   );

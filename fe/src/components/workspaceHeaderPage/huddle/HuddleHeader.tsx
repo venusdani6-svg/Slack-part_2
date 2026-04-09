@@ -3,7 +3,7 @@ import { HuddleCustomButton } from "./HuddleCustomButton";
 export function HuddlesHeader() {
   return (
     <div className="flex items-center justify-between">
-      <h1 className="text-[18px] font-[700] text-[#313131]">
+      <h1 className="text-[18px] font-bold text-[#313131]">
         Huddles
       </h1>
 

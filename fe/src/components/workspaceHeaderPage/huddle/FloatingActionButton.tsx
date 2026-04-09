@@ -31,7 +31,7 @@ export function FloatingActionButton() {
   return (
     <div
       className={`
-        fixed bottom-[24px] right-[24px]
+        fixed bottom-6 right-6
         transition-opacity duration-300
         ${visible ? "opacity-100" : "opacity-0 pointer-events-none"}
       `}
