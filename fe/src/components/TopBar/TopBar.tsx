@@ -30,10 +30,10 @@ export default function TopBar() {
     ">
     <div className="flex items-center gap-[4px] ml-[2px] z-10 mr-[4px]">
       <IconBtn>
-        <FiArrowLeft size={18} className="text-white/90" />
+        <FiArrowLeft size={18} className="text-white/50" onClick={() => {history.back()}}/>
       </IconBtn>
       <IconBtn>
-        <FiArrowRight size={18} className="text-white/30" />
+        <FiArrowRight size={18} className="text-white/50" onClick={() => {history.forward()}}/>
       </IconBtn>
       <IconBtn>
         <FiClock size={18} className="text-white/90" />

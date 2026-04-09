@@ -73,7 +73,7 @@ export default function WorkspaceHeader() {
             <h1 className="font-bold text-[25px] px-2 rounded">
               {workspaceName}
             </h1>
-            <p>˅</p>
+            <img src="/svg/arrowdown.svg" alt="arrowdown" width={"25px"} style={{marginLeft: "-5px"}}/>
           </div>
           {isNameMenuOpen && (
             <div className="absolute top-full left-0 mt-1 z-50">
