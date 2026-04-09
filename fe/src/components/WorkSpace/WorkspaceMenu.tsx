@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useSocket } from "@/providers/SocketProvider";
 import { usePresenceStore, presenceColor } from "@/store/presence-store";
 import { useThreadStore } from "@/store/thread-store";
+import { useWorkspace } from "@/context/Workspacecontext";
 
 export default function WorkspaceMenu(props: { userData: any }) {
     const [open, setOpen] = useState(false);
@@ -15,6 +16,9 @@ export default function WorkspaceMenu(props: { userData: any }) {
     const [profileOpen, setProfileOpen] = useState(false);
     const router = useRouter();
     const { socket } = useSocket();
+
+    const { workspace } = useWorkspace();
+    const workspace_name = workspace?.name ?? null;
 
     // Real presence: current user is online if their id is in the presence store
     const { isOnline } = usePresenceStore();
@@ -129,7 +133,7 @@ export default function WorkspaceMenu(props: { userData: any }) {
 
                 <Divider />
 
-                <MenuItem label="Sign out of NC" onClick={signOut} />
+                <MenuItem label={`Sign out of ${workspace_name}`} onClick={signOut} />
             </div>
 
             <ProfileSidebar
@@ -157,7 +161,7 @@ function MenuItem({
     return (
         <div
             onClick={onClick}
-            className="flex items-center justify-between px-4 py-[6px] text-[14px] cursor-pointer transition hover:bg-[#F4EDE4]"
+            className="flex items-center justify-between px-4 py-[6px] text-[14px] cursor-pointer transition hover:bg-[#F4EDE4] hover: rounded-xl"
         >
             <span>{label}</span>
             {arrow && <span className="text-gray-400">›</span>}

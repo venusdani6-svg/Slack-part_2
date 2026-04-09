@@ -3,16 +3,17 @@
 //KIH
 
 import React, { useState } from "react";
+import { useWorkspace } from "@/context/Workspacecontext";
 
 // ===== TYPES =====
 type Item =
   | "divider"
   | {
-      label: string;
-      icon?: string;
-      onClick?: () => void;
-      submenu?: ("divider" | { label: string; icon?: string; onClick?: () => void })[];
-    };
+    label: string;
+    icon?: string;
+    onClick?: () => void;
+    submenu?: ("divider" | { label: string; icon?: string; onClick?: () => void })[];
+  };
 
 // ===== DATA =====
 const menuList: Item[] = [
@@ -40,6 +41,9 @@ const menuList: Item[] = [
 
 // ===== UI =====
 export const WorkspaceNameMenu: React.FC = () => {
+
+  const { workspace } = useWorkspace();
+  const workspace_name = workspace?.name ?? null;
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -47,11 +51,11 @@ export const WorkspaceNameMenu: React.FC = () => {
       {/* Header */}
       <div className="flex items-center gap-3 px-2 py-2">
         <div className="w-[36px] h-[36px] rounded-md bg-[#8f8f8f] flex items-center justify-center text-[#dddbdb] text-sm font-semibold">
-          <p className="text-[20px] ">S</p>
+          <p className="text-[20px] ">{workspace_name ? workspace_name.charAt(0).toUpperCase() : "?"}</p>
         </div>
         <div>
-          <div className="text-[15px] font-semibold">STAR</div>
-          <div className="text-[13px] text-[#7a7979]">star-djo6038.slack.com</div>
+          <div className="text-[15px] font-semibold">{workspace_name}</div>
+          <div className="text-[13px] text-[#7a7979]">{workspace_name}.slack.com</div>
         </div>
       </div>
 

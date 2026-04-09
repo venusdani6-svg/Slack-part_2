@@ -38,23 +38,25 @@ export const ChannelList = () => {
   }, [width]);
 
   return (
-    <div
-      className="relative h-full shrink-0 bg-[rgb(92,42,92)] text-white flex flex-col"
-      style={{ width: `${width}px`, minWidth: `${MIN_WIDTH}px`, maxWidth: `${MAX_WIDTH}px` }}
-    >
-      <WorkspaceHeader />
-
-      <div className="flex-1 overflow-y-auto px-2">
-        <ChannelListComponent />
-        <DMList />
-      </div>
-
-      {/* Drag handle */}
+    <div className="bg-[#410f41]">
       <div
-        onMouseDown={onMouseDown}
-        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/20 transition-colors"
-        title="Drag to resize"
-      />
+        className="relative h-full shrink-0 bg-[rgb(92,42,92)] text-white flex flex-col rounded-l-lg"
+        style={{ width: `${width}px`, minWidth: `${MIN_WIDTH}px`, maxWidth: `${MAX_WIDTH}px` }}
+      >
+        <WorkspaceHeader />
+
+        <div className="flex-1 overflow-y-auto px-2">
+          <ChannelListComponent />
+          <DMList />
+        </div>
+
+        {/* Drag handle */}
+        <div
+          onMouseDown={onMouseDown}
+          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-white/20 transition-colors"
+          title="Drag to resize"
+        />
+      </div>
     </div>
   );
 };
