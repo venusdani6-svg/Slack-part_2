@@ -16,6 +16,8 @@ import { useAuth } from "@/context/Authcontext";
 import { useSocket } from "@/providers/SocketProvider";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import { IconType } from "react-icons";
+
+
 export default function DirectoriesChannel() {
           const { socket } = useSocket();
   const [channels, setChannels] = useState<any[]>([]);
@@ -24,19 +26,21 @@ export default function DirectoriesChannel() {
   const { user } = useAuth();
   const userId = user?.id;
 
-    const normalizeChannel = (ch: any) => ({
-    id: ch.id,
-    title: ch.name,
-    label: ch.name,
-    comment: ch.channelType,
-    members: ch.members?.length || 0,
-    joined: ch.members?.some((m: any) => m.id === userId),
-  });
+    const normalizeChannel = useCallback(
+    (ch: any) => ({
+        id: ch.id,
+        title: ch.name,
+        label: ch.name,
+        comment: ch.channelType,
+        members: ch.members?.length || 0,
+        joined: ch.members?.some((m: any) => m.id === userId),
+    }),
+    [userId]
+    );
+
    useEffect(() => {
       if (!socket || !workspaceId || !userId) return;
   
-    //   setLoading(true);
-    if (!socket.connected) socket.connect();
       // JOIN ROOM
       socket.emit("join_workspace", { workspaceId });
   
@@ -96,16 +100,11 @@ export default function DirectoriesChannel() {
     const filteredData = useMemo(() => {
         const q = search.toLowerCase();
 
-        return channels.filter((item) => {
-            return Object.entries(item).some(([key, val]) => {
-                let searchable = String(val).toLowerCase();
-                if (key === "joined") {
-                    searchable = val ? "joined true" : "not joined false";
-                }
-                return `${key} ${searchable}`.includes(q);
-            });
-        });
-    }, [search, channels]);
+        return channels.filter((item) =>
+    item.title.toLowerCase().includes(q)
+  );
+}, [search, channels]);
+
     return (
         <div className="w-full h-full overflow-y-scroll">
             <div className="w-full px-[250px]  flex justify-between items-end mb-[20px]">
@@ -196,8 +195,9 @@ export default function DirectoriesChannel() {
                 <div className="max-w-[100%]   w-[calc(100vw-950px)] overflow-hidden border-[1px] rounded-[15px]">
                     {filteredData.map((item, i) => (
                         <DirectoriesChannelsItem
-                            key={i}
-                            icon={FiLock}
+                            key={item.id}
+                            id={item.id}
+                            icon={item.comment === "public" ? FiLock : FiLock}
                             title={item.title}
                             comment={item.comment}
                             members={item.members}
