@@ -17,6 +17,7 @@ type ButtonProps = {
   radius?: string;
   showIcon?: boolean;
   icon?: IconType;
+  suffix?: React.ReactNode;
 };
 
 export default function CustomButton({
