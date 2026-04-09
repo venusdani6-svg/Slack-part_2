@@ -131,7 +131,7 @@ export class ChannelService {
             workspace,
             channelType: type,
             creatorId: userId,
-            members: [user]
+            members: type === ChannelType.PRIVATE ? [user] : [],
         });
 
         if (type === ChannelType.PRIVATE && invitedUserIds && invitedUserIds.length > 0) {
