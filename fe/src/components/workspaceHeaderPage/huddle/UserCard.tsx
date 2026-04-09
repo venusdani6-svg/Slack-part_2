@@ -7,16 +7,16 @@ import { HuddleCustomButton } from "./HuddleCustomButton";
 
 export function UserCard({ type }: UserCardProps) {
   return (
-    <div className="bg-white border border-[#a1a1a1] rounded-[8px] overflow-hidden">
+    <div className="bg-white border border-[#a1a1a1] rounded-lg w-75.25 h-54 overflow-hidden">
       
       {/* TOP VISUAL AREA */}
-      <div className="relative h-[180px] w-full bg-[#1d1c1d]">
+      <div className="relative w-75.25 h-34  bg-[#1d1c1d]">
 
         <Image
           src="/Newimg/JPG/LiskFeng-Star_Gazing.jpg"
           alt=""
           fill
-          className="object-cover opacity-[0.9]"
+          className="w-75.25 h-34 object-cover opacity-[0.9]"
         />
 
         {/* Avatar Stack */}
