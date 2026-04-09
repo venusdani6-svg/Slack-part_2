@@ -1,3 +1,5 @@
+//DirectoriesChannels.tsx
+
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
@@ -200,6 +202,27 @@ export default function DirectoriesChannel() {
                             ))}
                         </DirectoriesDropdownBtn.Content>
                     </DirectoriesDropdownBtn>
+                    <DirectoriesDropdownBtn>
+                        <DirectoriesDropdownBtn.Trigger placeholder="Workspaces" />
+                        <DirectoriesDropdownBtn.Content>
+                            <DirectoriesDropdownBtn.Search placeholder="Search..." />
+                            <DirectoriesDropdownBtn.Radio label="Workspaces" />
+                        </DirectoriesDropdownBtn.Content>
+                    </DirectoriesDropdownBtn>
+
+                    <DirectoriesDropdownBtn>
+                        <DirectoriesDropdownBtn.Trigger placeholder="Organization" />
+                        <DirectoriesDropdownBtn.Content>
+                            <DirectoriesDropdownBtn.Search placeholder="Search..." />
+                        </DirectoriesDropdownBtn.Content>
+                    </DirectoriesDropdownBtn>
+
+                    <div className="flex items-center gap-[6px] ml-[8px] text-[#313131] text-[14px] font-[500] cursor-pointer">
+                        <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] fill-[#38bdf8]">
+                            <path d="M3 5h18v2H3V5zm4 6h10v2H7v-2zm3 6h4v2h-4v-2z" />
+                        </svg>
+                        <span>Filters</span>
+                    </div>
                 </div>
 
                 {/* SORT */}
