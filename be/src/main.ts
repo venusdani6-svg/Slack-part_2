@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -10,17 +11,16 @@ async function bootstrap() {
 
   app.enableCors({
     origin: '*',
-    
+
     credentials: true,
   });
 
   app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
-  
-  const port = process.env.PORT ?? 5050;
+
+  const port = process.env.PORT ?? 5000;
   app.setGlobalPrefix('api');
   await app.listen(port);
   app.useGlobalPipes(new ValidationPipe());
-  
 
   const logger = new Logger('Bootstrap');
   logger.log(`Server is running on http://localhost:${port}`);

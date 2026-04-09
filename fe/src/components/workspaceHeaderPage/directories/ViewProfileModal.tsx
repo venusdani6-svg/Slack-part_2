@@ -5,12 +5,13 @@ import type { DirectoryUser } from "@/lib/mapArchiveUser";
 
 type Props = {
   user: DirectoryUser;
+  avater: any;
   onClose: () => void;
 };
 
 const STATUS_CONFIG = {
-  online:  { dot: "bg-[#2bac76]", label: "Active" },
-  away:    { dot: "bg-[#e8a838]", label: "Away" },
+  online: { dot: "bg-[#2bac76]", label: "Active" },
+  away: { dot: "bg-[#e8a838]", label: "Away" },
   offline: { dot: "bg-[#9ca3af]", label: "Offline" },
 } as const;
 

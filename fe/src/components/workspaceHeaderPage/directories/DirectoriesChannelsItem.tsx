@@ -6,6 +6,7 @@ import { useState } from "react";
 import CustomButton from "../component/channel_button";
 import { FiHash } from "react-icons/fi";
 import { FaLock } from "react-icons/fa";
+import { useRouter, useParams } from "next/navigation";
 
 type ChannelsItemProps = {
   title?: string;
@@ -13,18 +14,34 @@ type ChannelsItemProps = {
   active?: boolean;
   icon?: IconType;
   members?: number;
+  id: string;
   joined?: boolean;
   onClick?: () => void;
 };
 
 export default function DirectoriesChannelsItem({
-  title, comment, members, active, icon: Icon, joined, onClick,
+  title, comment, members, active, icon: Icon, joined, onClick, id,
 }: ChannelsItemProps) {
   const [hovered, setHovered] = useState(false);
+  const params = useParams();
+  // const workspaceID = params('workspaceId')
+  const workspaceID = Array.isArray(params.workspaceId)
+    ? params.workspaceId[0]
+    : params.workspaceId;
+  const router = useRouter();
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+
+      router.push(`/${workspaceID}/${id}`); // ✅ navigation  
+      location.reload();
+    }
+  };
 
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="w-full h-[80px] flex items-center relative px-[12px] transition-all duration-[120ms] cursor-pointer border-b-[1px] border-[#767676]"
@@ -32,7 +49,7 @@ export default function DirectoriesChannelsItem({
       <div className="ml-[10px]">
         <div className="w-[100%] h-[60%]">
           <div className="flex items-center gap-[10px]">
-           {comment === "public" ? <FiHash size={12} className="text-black"/> : <FaLock size={12} className="text-black"/>}
+            {comment === "public" ? <FiHash size={12} className="text-black" /> : <FaLock size={12} className="text-black" />}
             <div className="flex flex-col justify-center">
               <div className="text-[#313131] text-[14px] font-[500]">
                 <span className="text-[18px] font-bold mr-[15px]">{title}</span>

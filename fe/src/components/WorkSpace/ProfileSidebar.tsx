@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { getUserById } from "@/lib/api";
 import { useSocket } from "@/providers/SocketProvider";
 import { useMessageStore } from "@/store/message-store";
+import { useDirectoryStore } from "@/store/directory-store";
 
 type Presence = "online" | "idle" | "offline";
 
@@ -21,35 +22,28 @@ type Props = {
     open: boolean;
     onClose: () => void;
     userdata: any | null;
-    /** When true, hides all edit controls — used when viewing another user's profile */
     readonly?: boolean;
 };
 
 export default function ProfileSidebar({ open, onClose, userdata, readonly = false }: Props) {
     const [editOpen, setEditOpen] = useState(false);
     const [user, setUser] = useState<User | null>(null);
-
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
     const [localTime, setLocalTime] = useState("");
 
     const { socket } = useSocket();
     const { messages, setMessages } = useMessageStore();
-    // ---------------------------
+    // Single source of truth for directory cards
+    const patchUser = useDirectoryStore((s) => s.patchUser);
+
     // Fetch user
-    // ---------------------------
     const fetchUser = async (id: string) => {
         try {
             setLoading(true);
             setError(null);
-
             const data = await getUserById(id);
-
-            // TEMP: simulate presence (replace with socket later)
-            const presence: Presence = "online";
-
-            setUser({ ...data, presence });
+            setUser({ ...data, presence: "online" });
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -58,43 +52,26 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
     };
 
     useEffect(() => {
-        console.log("userdata.id==============================>", userdata);
-
         if (open && userdata) fetchUser(userdata.id);
     }, [open, userdata]);
 
-    // ---------------------------
-    // Real Local Time (updates every minute)
-    // ---------------------------
+    // Local time
     useEffect(() => {
         const updateTime = () => {
-            const now = new Date();
-            const formatted = now.toLocaleTimeString([], {
-                hour: "numeric",
-                minute: "2-digit",
-            });
-            setLocalTime(formatted);
+            setLocalTime(new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
         };
-
         updateTime();
         const interval = setInterval(updateTime, 60000);
-
         return () => clearInterval(interval);
     }, []);
-    // ==============soket====================
+
+    // Socket: reflect remote profile updates inside the sidebar itself
     useEffect(() => {
         if (!socket) return;
-
-        const handleProfileUpdated = (payload: {
-            id?: string;
-            userId?: string;
-            name?: string;
-            dispname?: string;
-            avatar?: string;
-        }) => {
-            const updatedId = payload.id ?? payload.userId;
+        const handle = (payload: { id?: string; userId?: string; name?: string; dispname?: string; avatar?: string }) => {
+            const uid = payload.id ?? payload.userId;
             setUser((prev) => {
-                if (!prev || prev.id !== updatedId) return prev;
+                if (!prev || prev.id !== uid) return prev;
                 return {
                     ...prev,
                     name: payload.name ?? prev.name,
@@ -103,117 +80,70 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
                 };
             });
         };
-
-        // Listen to both event names — backend emits "updated_profile",
-        // some paths emit "profile:updated"
-        socket.on("profile:updated", handleProfileUpdated);
-        socket.on("updated_profile", handleProfileUpdated);
-
+        socket.on("profile:updated", handle);
+        socket.on("updated_profile", handle);
         return () => {
-            socket.off("profile:updated", handleProfileUpdated);
-            socket.off("updated_profile", handleProfileUpdated);
+            socket.off("profile:updated", handle);
+            socket.off("updated_profile", handle);
         };
     }, [socket]);
 
-    // ---------------------------
-    // ESC Close
-    // ---------------------------
+    // ESC close
     useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === "Escape") onClose();
-        };
-        window.addEventListener("keydown", handleEsc);
-        return () => window.removeEventListener("keydown", handleEsc);
+        const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
     }, [onClose]);
 
-    // ---------------------------
     // Save profile
-    // ---------------------------
-    // if (!user?.id) {
-    //     console.error("User ID missing. Cannot update profile.");
-    //     return;
-    // }
     const handleSaveProfile = async (data: any) => {
         try {
             let avatar = user?.avatar ?? null;
 
-            // ✅ SINGLE FormData (avatar + name + dispname)
-
             const formData = new FormData();
-
             formData.append("name", data.name ?? "");
             formData.append("dispname", data.dispname ?? data.name ?? "");
-            // if (data.avatar) {
-            //     formData.append("avatar", data.avatar);
-            // }
-
             if (data.avatar instanceof File) {
                 formData.append("avatar", data.avatar);
             }
 
-            // ✅ DEBUG (real visibility)
-            for (let [key, value] of formData.entries()) {
-                // console.log(key, value);
-            }
-            console.log("user================>", userdata);
-
-            // ✅ IMPORTANT: correct backend endpoint
             const res = await fetch(
                 `${process.env.NEXT_PUBLIC_SOCKET_URL}/api/user/profile/${userdata.id}`,
-                {
-                    method: "PUT",
-                    body: formData,
-                },
+                { method: "PUT", body: formData },
             );
-            // console.log("res===>", res);
 
-            if (!res.ok) {
-                throw new Error("Profile update failed");
-            }
+            if (!res.ok) throw new Error("Profile update failed");
 
-            // 1. REST update
             const result = await res.json();
+            avatar = result.avatar ?? avatar;
 
-            // 2. socket broadcast
+            // 1. Update directory store immediately — Cards re-render without waiting for socket
+            patchUser(userdata.id, {
+                name: result.dispname ?? data.dispname ?? data.name,
+                avatar: result.avatar ?? avatar ?? undefined,
+            });
+
+            // 2. Broadcast via socket so other clients update too
             socket?.emit("profile:update", {
-                id: user?.id,
+                id: userdata.id,
                 name: result.name,
                 dispname: result.dispname,
                 avatar: result.avatar,
             });
 
-            avatar = result.avatar ? result.avatar : avatar;
-
-            // update zustand message store — reflect new dispname/avatar on all messages
+            // 3. Update message store
             setMessages(
                 messages.map((m) =>
                     m.sender?.id === userdata.id
-                        ? {
-                              ...m,
-                              sender: {
-                                  ...m.sender,
-                                  dispname: result.dispname ?? m.sender.dispname,
-                                  avatar: result.avatar ?? m.sender.avatar,
-                              },
-                          }
+                        ? { ...m, sender: { ...m.sender, dispname: result.dispname ?? m.sender.dispname, avatar: result.avatar ?? m.sender.avatar } }
                         : m,
                 ),
             );
 
-            // ✅ KEEP YOUR EXISTING UI LOGIC
+            // 4. Update sidebar local state
             setUser((prev) =>
-                prev
-                    ? {
-                          ...prev,
-                          name: result.name ?? data.name,
-                          dispname:
-                              result.dispname ?? data.dispname ?? data.name,
-                          avatar,
-                      }
-                    : prev,
+                prev ? { ...prev, name: result.name ?? data.name, dispname: result.dispname ?? data.dispname ?? data.name, avatar } : prev,
             );
-
-            // =====================soket===================
 
             setEditOpen(false);
         } catch (err) {
@@ -221,64 +151,27 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
         }
     };
 
-    // ---------------------------
-    // Presence UI
-    // ---------------------------
     const getPresence = () => {
         switch (user?.presence) {
-            case "online":
-                return {
-                    color: "bg-green-500",
-                    text: "Active",
-                };
-            case "idle":
-                return {
-                    color: "bg-yellow-400",
-                    text: "Away",
-                };
-            default:
-                return {
-                    color: "bg-gray-400",
-                    text: "Offline",
-                };
+            case "online": return { color: "bg-green-500", text: "Active" };
+            case "idle":   return { color: "bg-yellow-400", text: "Away" };
+            default:       return { color: "bg-gray-400", text: "Offline" };
         }
     };
-
     const presence = getPresence();
 
     return (
         <>
-            {/* Overlay */}
             <div
                 onClick={onClose}
-                className={`
-                  fixed inset-0 z-40 bg-black/30
-                  transition-opacity duration-300 ease-out
-                  ${open ? "opacity-100" : "opacity-0 pointer-events-none"}
-                `}
+                className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-300 ease-out ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`}
             />
-
-            {/* Sidebar */}
             <div
-                className={`
-                  fixed right-0 top-0 h-full w-[480px] bg-gray-50 z-50
-                  shadow-[-8px_0_24px_rgba(0,0,0,0.12)]
-                  transform transition-transform duration-300
-                  ease-[cubic-bezier(0.16,1,0.3,1)]
-                  ${open ? "translate-x-0" : "translate-x-full"}
-                `}
+                className={`fixed right-0 top-0 h-full w-[480px] bg-gray-50 z-50 shadow-[-8px_0_24px_rgba(0,0,0,0.12)] transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${open ? "translate-x-0" : "translate-x-full"}`}
             >
-                {/* Header */}
-                <div className="flex justify-between items-center px-5 py-4 ">
-                    <h2 className="text-[18px] font-semibold text-[#1d1c1de3]">
-                        Profile
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-xl text-gray-500 hover:text-black transition"
-                    >
-                        ✕
-                    </button>
+                <div className="flex justify-between items-center px-5 py-4">
+                    <h2 className="text-[18px] font-semibold text-[#1d1c1de3]">Profile</h2>
+                    <button onClick={onClose} className="text-xl text-gray-500 hover:text-black transition">✕</button>
                 </div>
 
                 <div className="px-5 py-5">
@@ -287,123 +180,67 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
 
                     {user && (
                         <>
-                            {/* Avatar */}
                             <div className="flex flex-col items-center">
                                 <div className="relative w-[280px] h-[280px] rounded-xl overflow-hidden bg-[#7B2B8F] group">
-                                    {user?.avatar ? (
-                                        <img
-                                            src={`${process.env.NEXT_PUBLIC_SOCKET_URL}${user.avatar}`}
-                                            className="w-full h-full object-cover"
-                                        />
+                                    {user.avatar ? (
+                                        <img src={`${process.env.NEXT_PUBLIC_SOCKET_URL}${user.avatar}`} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
                                             <div className="w-[100px] h-[100px] bg-white rounded-full" />
                                         </div>
                                     )}
-
-                                    {/* Hover Overlay — only for own profile */}
                                     {!readonly && (
-                                    <div
-                                        onClick={() => setEditOpen(true)}
-                                        className="
-                                          absolute inset-0 bg-black/40 opacity-0
-                                          group-hover:opacity-100
-                                          transition duration-200 ease-out
-                                          flex items-center justify-center cursor-pointer
-                                        "
-                                    >
-                                        <span className="text-white text-sm font-medium">
-                                            Change photo
-                                        </span>
-                                    </div>
+                                        <div
+                                            onClick={() => setEditOpen(true)}
+                                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition duration-200 ease-out flex items-center justify-center cursor-pointer"
+                                        >
+                                            <span className="text-white text-sm font-medium">Change photo</span>
+                                        </div>
                                     )}
                                 </div>
 
-                                {/* Name */}
                                 <div className="flex items-start gap-70 mt-5">
-                                    <div className=" text-[23px] font-semibold">
-                                        {user.dispname}
-                                    </div>
-
+                                    <div className="text-[23px] font-semibold">{user.dispname}</div>
                                     {!readonly && (
-                                    <button
-                                        onClick={() => setEditOpen(true)}
-                                        className="text-[16px] font-bold text-[#1264A3] hover:underline mt-1"
-                                    >
-                                        Edit
-                                    </button>
+                                        <button onClick={() => setEditOpen(true)} className="text-[16px] font-bold text-[#1264A3] hover:underline mt-1">Edit</button>
                                     )}
                                 </div>
 
-                                {/* Presence */}
                                 <div>+ Add name pronunciation</div>
                                 <div className="flex items-center gap-2 mt-3 text-[14px] text-gray-600">
-                                    <div
-                                        className={`w-[8px] h-[8px] rounded-full ${presence.color}`}
-                                    />
+                                    <div className={`w-[8px] h-[8px] rounded-full ${presence.color}`} />
                                     {presence.text}
                                 </div>
-
-                                {/* Time */}
                                 <div className="flex items-center gap-2 mt-2 text-[13px] text-gray-500">
                                     🕒 {localTime} local time
                                 </div>
                             </div>
 
-                            {/* Actions — only for own profile */}
                             {!readonly && (
-                            <div className="flex gap-2 mt-5">
-                                <button className="flex-1 h-[36px] border rounded-md hover:bg-gray-100 transition">
-                                    Set a status
-                                </button>
-                                <button className="flex-1 h-[36px] border rounded-md hover:bg-gray-100 transition">
-                                    View as
-                                </button>
-                                <button className="w-[36px] border rounded-md hover:bg-gray-100 transition">
-                                    ⋮
-                                </button>
-                            </div>
+                                <div className="flex gap-2 mt-5">
+                                    <button className="flex-1 h-[36px] border rounded-md hover:bg-gray-100 transition">Set a status</button>
+                                    <button className="flex-1 h-[36px] border rounded-md hover:bg-gray-100 transition">View as</button>
+                                    <button className="w-[36px] border rounded-md hover:bg-gray-100 transition">⋮</button>
+                                </div>
                             )}
 
-                            {/* Contact */}
                             <div className="mt-6 border-t pt-4">
                                 <div className="flex justify-between">
-                                    <span className="font-semibold text-[14px]">
-                                        Contact information
-                                    </span>
-                                    {!readonly && (
-                                    <button className="text-[#1264A3] text-sm hover:underline">
-                                        Edit
-                                    </button>
-                                    )}
+                                    <span className="font-semibold text-[14px]">Contact information</span>
+                                    {!readonly && <button className="text-[#1264A3] text-sm hover:underline">Edit</button>}
                                 </div>
-
                                 <div className="mt-3">
-                                    <div className="text-xs text-gray-500">
-                                        Email Address
-                                    </div>
-                                    <div className="text-sm text-[#1264A3]">
-                                        {user.email}
-                                    </div>
+                                    <div className="text-xs text-gray-500">Email Address</div>
+                                    <div className="text-sm text-[#1264A3]">{user.email}</div>
                                 </div>
                             </div>
 
-                            {/* About */}
                             <div className="mt-6 border-t pt-4">
                                 <div className="flex justify-between">
-                                    <span className="font-semibold text-[14px]">
-                                        About me
-                                    </span>
-                                    {!readonly && (
-                                    <button className="text-[#1264A3] text-sm hover:underline">
-                                        Edit
-                                    </button>
-                                    )}
+                                    <span className="font-semibold text-[14px]">About me</span>
+                                    {!readonly && <button className="text-[#1264A3] text-sm hover:underline">Edit</button>}
                                 </div>
-
-                                <div className="mt-2 text-sm text-[#1264A3] cursor-pointer hover:underline">
-                                    + Add Start Date
-                                </div>
+                                <div className="mt-2 text-sm text-[#1264A3] cursor-pointer hover:underline">+ Add Start Date</div>
                             </div>
                         </>
                     )}

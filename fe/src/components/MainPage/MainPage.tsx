@@ -20,6 +20,7 @@ import type { User } from "@/context/Authcontext";
 import Directories from "../workspaceHeaderPage/directories/directories";
 import { DraftsPage } from "../workspaceHeaderPage/Drapts&send/DraptsPage";
 import HuddlePage from "../workspaceHeaderPage/huddle/HuddlePage";
+import ThreadsPage from "../workspaceHeaderPage/threads/ThreadsPage";
 
 export const MainPage = (props: { userData: User | null }) => {
     const { socket } = useSocket();
@@ -205,6 +206,7 @@ export const MainPage = (props: { userData: User | null }) => {
                 {flag === "Directories" && <Directories />}
                 {flag === "Drafts % Sent" && <DraftsPage />}
                 {flag === "Huddles" && <HuddlePage />}
+                {flag === "Threads" && <ThreadsPage />}
                 {flag === "" &&
                     <div>
                         <MainTopBar />
