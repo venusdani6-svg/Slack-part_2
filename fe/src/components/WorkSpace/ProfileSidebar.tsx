@@ -37,6 +37,44 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
     // Single source of truth for directory cards
     const patchUser = useDirectoryStore((s) => s.patchUser);
 
+    useEffect(() => {
+        const w = window as Window & { __profileSidebarMounts?: number };
+        w.__profileSidebarMounts = (w.__profileSidebarMounts ?? 0) + 1;
+        // #region agent log
+        fetch('http://127.0.0.1:7597/ingest/00c7dff1-0dec-43fd-8979-4145a69e3cda', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e4736c' },
+            body: JSON.stringify({
+                sessionId: 'e4736c',
+                runId: 'baseline',
+                hypothesisId: 'H7',
+                location: 'ProfileSidebar.tsx:mount',
+                message: 'profile-sidebar-mounted',
+                data: { mounts: w.__profileSidebarMounts, open, hasUserdata: !!userdata },
+                timestamp: Date.now(),
+            }),
+        }).catch(() => { });
+        // #endregion
+    }, []);
+
+    useEffect(() => {
+        // #region agent log
+        fetch('http://127.0.0.1:7597/ingest/00c7dff1-0dec-43fd-8979-4145a69e3cda', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e4736c' },
+            body: JSON.stringify({
+                sessionId: 'e4736c',
+                runId: 'baseline',
+                hypothesisId: 'H7',
+                location: 'ProfileSidebar.tsx:openChange',
+                message: 'profile-sidebar-open-state',
+                data: { open, hasUserdata: !!userdata },
+                timestamp: Date.now(),
+            }),
+        }).catch(() => { });
+        // #endregion
+    }, [open, !!userdata]);
+
     // Fetch user
     const fetchUser = async (id: string) => {
         try {

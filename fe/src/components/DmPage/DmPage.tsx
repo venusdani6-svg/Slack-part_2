@@ -27,6 +27,7 @@ import Directories from "../workspaceHeaderPage/directories/directories";
 import { DraftsPage } from "../workspaceHeaderPage/Drapts&send/DraptsPage";
 import HuddlePage from "../workspaceHeaderPage/huddle/HuddlePage";
 import ThreadsPage from "../workspaceHeaderPage/threads/ThreadsPage";
+import ProfileSidebar from "../WorkSpace/ProfileSidebar";
 
 interface DmPageProps {
     conversationId: string;
@@ -41,7 +42,9 @@ export default function DmPage({ conversationId }: DmPageProps) {
     const [messages, setMessages] = useState<DmMessageItem[]>([]);
     const [conversation, setConversation] = useState<DmConversationItem | null>(null);
     const [loading, setLoading] = useState(true);
+    const [activeMentionUserId, setActiveMentionUserId] = useState<string | null>(null);
     const bottomRef = useRef<HTMLDivElement | null>(null);
+    const messageScrollRef = useRef<HTMLDivElement | null>(null);
 
     const {
         isOpen: showThread,
@@ -160,6 +163,48 @@ export default function DmPage({ conversationId }: DmPageProps) {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    useEffect(() => {
+        const el = messageScrollRef.current;
+        if (!el) return;
+
+        const emitDebugLog = (runId: string, message: string, data: Record<string, unknown>) => {
+            // #region agent log
+            fetch('http://127.0.0.1:7597/ingest/00c7dff1-0dec-43fd-8979-4145a69e3cda', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e4736c' },
+                body: JSON.stringify({
+                    sessionId: 'e4736c',
+                    runId,
+                    hypothesisId: 'H1-H2-H4',
+                    location: 'DmPage.tsx:messageScrollRef',
+                    message,
+                    data,
+                    timestamp: Date.now(),
+                }),
+            }).catch(() => { });
+            // #endregion
+        };
+
+        const reportMetrics = (runId: string, phase: string) => {
+            const rect = el.getBoundingClientRect();
+            emitDebugLog(runId, `dm-scroll-${phase}`, {
+                clientWidth: el.clientWidth,
+                scrollWidth: el.scrollWidth,
+                clientHeight: el.clientHeight,
+                scrollHeight: el.scrollHeight,
+                scrollTop: el.scrollTop,
+                overflowX: window.getComputedStyle(el).overflowX,
+                overflowY: window.getComputedStyle(el).overflowY,
+                rightGap: Math.round(window.innerWidth - rect.right),
+            });
+        };
+
+        reportMetrics('baseline', 'mount');
+        const onScroll = () => reportMetrics('baseline', 'scroll');
+        el.addEventListener("scroll", onScroll);
+        return () => el.removeEventListener("scroll", onScroll);
+    }, [messages.length, showThread, threadWidth]);
+
     const handleCommentClick = async (message: DmMessageItem) => {
         openThread(message as any);
         try {
@@ -239,14 +284,14 @@ export default function DmPage({ conversationId }: DmPageProps) {
     if (loading) return <SlackLoader />;
 
     return (
-        <div className="flex h-full">
+        <div className="flex h-full overflow-hidden">
             {/* Main DM chat area */}
             {flag === "Directories" && <Directories />}
             {flag === "Drafts % Sent" && <DraftsPage />}
             {flag === "Huddles" && <HuddlePage />}
             {flag === "Threads" && <ThreadsPage />}
             {flag === "" &&
-                <div className="flex flex-col flex-1 h-full bg-white w-full">
+                <div className="flex flex-col flex-1 min-w-0 h-full bg-white">
                     {/* Header */}
                     <div className="flex items-center gap-3 px-6 h-[49px] border-b border-gray-200 shrink-0">
                         <img src={otherUserAvatar} alt={otherUserName} className="w-7 h-7 rounded-lg" />
@@ -259,7 +304,7 @@ export default function DmPage({ conversationId }: DmPageProps) {
                     </div>
 
                     {/* Message list */}
-                    <div className="flex-1 overflow-y-scroll flex flex-col">
+                    <div ref={messageScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col min-w-0">
                         {messages.length === 0 ? (
                             <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                                 No messages yet. Say hello!
@@ -294,6 +339,7 @@ export default function DmPage({ conversationId }: DmPageProps) {
                                             onMessageDelete={handleDmMessageDelete}
                                             onEditSave={dmEditSave}
                                             onDeleteConfirm={dmDeleteConfirm}
+                                            onMentionClick={setActiveMentionUserId}
                                         />
                                     ))}
                                 </div>
@@ -329,6 +375,13 @@ export default function DmPage({ conversationId }: DmPageProps) {
                     />
                 </div>
             )}
+
+            <ProfileSidebar
+                open={!!activeMentionUserId}
+                onClose={() => setActiveMentionUserId(null)}
+                userdata={activeMentionUserId ? { id: activeMentionUserId } : null}
+                readonly={activeMentionUserId !== (user?.id ?? null)}
+            />
         </div>
     );
 }
