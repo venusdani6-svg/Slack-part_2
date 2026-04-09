@@ -11,12 +11,10 @@ import { Channel } from "./domi";
 import { FiLock } from "react-icons/fi";
 import DirectoriesChannelsItem from "./DirectoriesChannelsItem";
 import BannerSection from "./BannerSection";
-import { useEffect, useState, useCallback, useMemo, Key } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/Authcontext";
 import { useSocket } from "@/providers/SocketProvider";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { IconType } from "react-icons";
-
 
 export default function DirectoriesChannel() {
           const { socket } = useSocket();
@@ -192,20 +190,20 @@ export default function DirectoriesChannel() {
                     </DirectoriesDropdownBtn>
                 </div>
 
-                <div className="max-w-[100%]   w-[calc(100vw-950px)] overflow-hidden border-[1px] rounded-[15px]">
-                    {filteredData.map((item, i) => (
-                        <DirectoriesChannelsItem
-                            key={item.id}
-                            id={item.id}
-                            icon={item.comment === "public" ? FiLock : FiLock}
-                            title={item.title}
-                            comment={item.comment}
-                            members={item.members}
-                            joined={item.joined}
-                        />
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
+      {/* LIST */}
+      <div className="w-[calc(100vw-950px)] mx-auto border rounded-[15px]">
+        {filteredData.map((item) => (
+          <DirectoriesChannelsItem
+            key={item.id}
+            id={item.id}
+            icon={FiLock}
+            title={item.title}
+            comment={item.comment}
+            members={item.members}
+            joined={item.joined}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
