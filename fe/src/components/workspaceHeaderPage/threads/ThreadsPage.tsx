@@ -1,30 +1,37 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, memo } from "react";
 import { useAuth } from "@/context/Authcontext";
 import { useSocket } from "@/providers/SocketProvider";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
-import { useThreadStore } from "@/store/thread-store";
 import { getDmConversations, getDmMessages, getDmThread, DmConversationItem } from "@/lib/api/dm";
-import { getAvatarUrl, getDisplayName, formatLastReply } from "@/lib/messageUtils";
+import { getAvatarUrl, getDisplayName } from "@/lib/messageUtils";
 import { api } from "@/api";
-import { Thread } from "@/components/ThreadPage/ThreadPage";
-import { useThreadResize } from "@/hooks/useThreadResize";
+import SlackMessage from "@/components/ui/message/Message";
+import MessageEditor from "@/components/ui/messageEditor/MessageEditor";
+import { ReactionView } from "@/lib/api/reactions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface ThreadParent {
+interface RawMessage {
   id: string;
   content: string;
   createdAt: string;
   updatedAt: string;
   replyCount: number;
   lastReplyAt: string | null;
-  sender: { id: string; dispname: string | null; avatar: string; email?: string } | null;
-  reactions: any[];
-  files: any[];
   parentId: string | null;
   threadRootId: string | null;
+  sender: { id: string; dispname: string | null; avatar: string; email?: string } | null;
+  reactions: ReactionView[];
+  files: { id: string; name: string; type: string; path: string; size: number }[];
+  senderId?: string;
+  conversationId?: string;
+}
+
+interface ThreadEntry {
+  parent: RawMessage;
+  replies: RawMessage[];
   kind: "dm" | "public" | "private";
   channelId?: string;
   channelName?: string;
@@ -36,27 +43,177 @@ function safeArray<T>(v: unknown): T[] {
   return Array.isArray(v) ? (v as T[]) : [];
 }
 
+// ── Section header ─────────────────────────────────────────────────────────────
+
+const Section = memo(function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-3 px-6 py-2 border-b border-gray-100">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+          {title}
+        </h3>
+      </div>
+      {children}
+    </div>
+  );
+});
+
+// ── Single thread block ────────────────────────────────────────────────────────
+
+const ThreadBlock = memo(function ThreadBlock({
+  entry,
+  currentUserId,
+  onReplyAdded,
+  onReplyUpdated,
+  onReplyDeleted,
+  onReactionUpdated,
+}: {
+  entry: ThreadEntry;
+  currentUserId: string | undefined;
+  onReplyAdded: (parentId: string, reply: RawMessage) => void;
+  onReplyUpdated: (messageId: string, content: string, updatedAt: string) => void;
+  onReplyDeleted: (messageId: string) => void;
+  onReactionUpdated: (messageId: string, reactions: ReactionView[]) => void;
+}) {
+  const { parent, replies, kind, channelId, channelName, dmConversationId, otherUserName } = entry;
+
+  const contextLabel =
+    kind === "dm"
+      ? `DM · ${otherUserName ?? "Direct Message"}`
+      : `#${channelName ?? channelId}`;
+
+  const noop = useCallback(() => {}, []);
+
+  // Propagate reaction updates from SlackMessage up to entries state
+  const handleReactionUpdate = useCallback(
+    (msgId: string, reactions: ReactionView[]) => {
+      onReactionUpdated(msgId, reactions);
+    },
+    [onReactionUpdated],
+  );
+
+  // Propagate edits from SlackMessage up to entries state
+  const handleMessageUpdate = useCallback(
+    (msgId: string, newContent: string, newUpdatedAt: string) => {
+      onReplyUpdated(msgId, newContent, newUpdatedAt);
+    },
+    [onReplyUpdated],
+  );
+
+  // Propagate deletes from SlackMessage up to entries state
+  const handleMessageDelete = useCallback(
+    (msgId: string) => {
+      onReplyDeleted(msgId);
+    },
+    [onReplyDeleted],
+  );
+
+  return (
+    <div className="border-b border-gray-100 last:border-0">
+      {/* Context label */}
+      <div className="px-6 pt-3 pb-1">
+        <span className="text-xs font-medium text-[#007a5a] bg-[#007a5a]/8 px-2 py-0.5 rounded-full">
+          {contextLabel}
+        </span>
+      </div>
+
+      {/* Parent message */}
+      <SlackMessage
+        state="thread"
+        avatar={getAvatarUrl(parent.sender?.avatar)}
+        username={getDisplayName(parent.sender)}
+        time={parent.createdAt}
+        createdAt={parent.createdAt}
+        updatedAt={parent.updatedAt}
+        text={parent.content}
+        files={safeArray(parent.files)}
+        reactions={safeArray(parent.reactions)}
+        replies={0}
+        lastReply=""
+        messageId={parent.id}
+        channelId={channelId ?? ""}
+        currentUserId={currentUserId ?? null}
+        senderId={parent.sender?.id}
+        onCommentClick={noop}
+        onReactionUpdate={handleReactionUpdate}
+        hideThreadButton
+      />
+
+      {/* Replies */}
+      {replies.length > 0 && (
+        <div className="ml-[52px] border-l-2 border-gray-100 pl-3 mr-6 mb-2">
+          <div className="flex items-center gap-2 py-1.5">
+            <span className="text-xs font-semibold text-[#007a5a]">
+              {replies.length} {replies.length === 1 ? "reply" : "replies"}
+            </span>
+            <div className="flex-1 h-px bg-gray-100" />
+          </div>
+
+          {replies.map((reply) => (
+            <SlackMessage
+              key={reply.id}
+              state="thread"
+              avatar={getAvatarUrl(reply.sender?.avatar)}
+              username={getDisplayName(reply.sender)}
+              time={reply.createdAt}
+              createdAt={reply.createdAt}
+              updatedAt={reply.updatedAt}
+              text={reply.content}
+              files={safeArray(reply.files)}
+              reactions={safeArray(reply.reactions)}
+              replies={0}
+              lastReply=""
+              messageId={reply.id}
+              channelId={channelId ?? ""}
+              currentUserId={currentUserId ?? null}
+              senderId={reply.sender?.id}
+              onCommentClick={noop}
+              onReactionUpdate={handleReactionUpdate}
+              onMessageUpdate={handleMessageUpdate}
+              onMessageDelete={handleMessageDelete}
+              hideThreadButton
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Inline reply editor */}
+      <div className="px-6 pb-4 pt-1">
+        <MessageEditor
+          userData={currentUserId ? { id: currentUserId } : null}
+          parentMessageId={parent.id}
+          dmConversationId={dmConversationId ?? null}
+          placeholder="Reply in thread…"
+        />
+      </div>
+    </div>
+  );
+});
+
+// ── Main page ──────────────────────────────────────────────────────────────────
+
 export default function ThreadsPage() {
   const { user } = useAuth();
   const { socket } = useSocket();
   const workspaceId = useWorkspaceId();
 
-  const { openThread, setThreadMessages, closeThread, isOpen, selectedMessage } = useThreadStore();
-  const { threadWidth, onDragStart, THREAD_MIN, THREAD_MAX } = useThreadResize();
-
-  const [threads, setThreads] = useState<ThreadParent[]>([]);
+  const [entries, setEntries] = useState<ThreadEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openingId, setOpeningId] = useState<string | null>(null);
-  const [activeDmConvId, setActiveDmConvId] = useState<string | undefined>(undefined);
-  const [activeChannelId, setActiveChannelId] = useState<string | undefined>(undefined);
 
+  // ── Initial data load ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id || !workspaceId) return;
     let cancelled = false;
 
     const load = async () => {
       setLoading(true);
-      const collected: ThreadParent[] = [];
+      const collected: ThreadEntry[] = [];
 
       // 1. DM threads
       try {
@@ -65,26 +222,32 @@ export default function ThreadsPage() {
           safeArray<DmConversationItem>(convs).map(async (conv) => {
             try {
               const msgs = await getDmMessages(workspaceId, conv.id, user.id);
-              safeArray(msgs)
-                .filter((m: any) => !m.parentId && (m.replyCount ?? 0) > 0)
-                .forEach((m: any) => {
-                  collected.push({
-                    id: m.id,
-                    content: m.content ?? "",
-                    createdAt: m.createdAt,
-                    updatedAt: m.updatedAt,
-                    replyCount: m.replyCount ?? 0,
-                    lastReplyAt: m.lastReplyAt ?? null,
-                    sender: m.sender ?? null,
-                    reactions: safeArray(m.reactions),
-                    files: safeArray(m.files),
-                    parentId: null,
-                    threadRootId: null,
-                    kind: "dm",
-                    dmConversationId: conv.id,
-                    otherUserName: conv.otherUser?.dispname || conv.otherUser?.email || "Direct Message",
-                  });
-                });
+              const parents = safeArray<RawMessage>(msgs).filter(
+                (m) => !m.parentId && (m.replyCount ?? 0) > 0,
+              );
+              await Promise.all(
+                parents.map(async (parent) => {
+                  try {
+                    const thread = await getDmThread(workspaceId, conv.id, parent.id, user.id);
+                    const all = safeArray<RawMessage>(thread);
+                    collected.push({
+                      parent,
+                      replies: all.length > 1 ? all.slice(1) : [],
+                      kind: "dm",
+                      dmConversationId: conv.id,
+                      otherUserName: conv.otherUser?.dispname || conv.otherUser?.email || "Direct Message",
+                    });
+                  } catch {
+                    collected.push({
+                      parent,
+                      replies: [],
+                      kind: "dm",
+                      dmConversationId: conv.id,
+                      otherUserName: conv.otherUser?.dispname || conv.otherUser?.email || "Direct Message",
+                    });
+                  }
+                }),
+              );
             } catch { /* skip */ }
           }),
         );
@@ -105,26 +268,32 @@ export default function ThreadsPage() {
           channelList.map(async (ch: any) => {
             try {
               const res = await api.get(`/api/channels/${ch.id}/messages`);
-              safeArray<any>(res.data)
-                .filter((m: any) => !m.parentId && (m.replyCount ?? 0) > 0)
-                .forEach((m: any) => {
-                  collected.push({
-                    id: m.id,
-                    content: m.content ?? "",
-                    createdAt: m.createdAt,
-                    updatedAt: m.updatedAt,
-                    replyCount: m.replyCount ?? 0,
-                    lastReplyAt: m.lastReplyAt ?? null,
-                    sender: m.sender ?? null,
-                    reactions: safeArray(m.reactions),
-                    files: safeArray(m.files),
-                    parentId: null,
-                    threadRootId: null,
-                    kind: ch.channelType === "private" ? "private" : "public",
-                    channelId: ch.id,
-                    channelName: ch.name ?? ch.id,
-                  });
-                });
+              const parents = safeArray<RawMessage>(res.data).filter(
+                (m) => !m.parentId && (m.replyCount ?? 0) > 0,
+              );
+              await Promise.all(
+                parents.map(async (parent) => {
+                  try {
+                    const tRes = await api.get(`/api/channels/${ch.id}/messages/${parent.id}/thread`);
+                    const all = safeArray<RawMessage>(tRes.data);
+                    collected.push({
+                      parent,
+                      replies: all.length > 1 ? all.slice(1) : [],
+                      kind: ch.channelType === "private" ? "private" : "public",
+                      channelId: ch.id,
+                      channelName: ch.name ?? ch.id,
+                    });
+                  } catch {
+                    collected.push({
+                      parent,
+                      replies: [],
+                      kind: ch.channelType === "private" ? "private" : "public",
+                      channelId: ch.id,
+                      channelName: ch.name ?? ch.id,
+                    });
+                  }
+                }),
+              );
             } catch { /* skip */ }
           }),
         );
@@ -132,11 +301,11 @@ export default function ThreadsPage() {
 
       if (!cancelled) {
         collected.sort((a, b) => {
-          const at = a.lastReplyAt ?? a.createdAt;
-          const bt = b.lastReplyAt ?? b.createdAt;
+          const at = a.parent.lastReplyAt ?? a.parent.createdAt;
+          const bt = b.parent.lastReplyAt ?? b.parent.createdAt;
           return new Date(bt).getTime() - new Date(at).getTime();
         });
-        setThreads(collected);
+        setEntries(collected);
         setLoading(false);
       }
     };
@@ -145,47 +314,208 @@ export default function ThreadsPage() {
     return () => { cancelled = true; };
   }, [user?.id, workspaceId, socket]);
 
-  const dmThreads = useMemo(() => threads.filter((t) => t.kind === "dm"), [threads]);
-  const publicThreads = useMemo(() => threads.filter((t) => t.kind === "public"), [threads]);
-  const privateThreads = useMemo(() => threads.filter((t) => t.kind === "private"), [threads]);
+  // ── Real-time socket listeners ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!socket) return;
 
-  const handleOpenThread = async (t: ThreadParent) => {
-    if (openingId === t.id) return;
-    setOpeningId(t.id);
-    setActiveDmConvId(t.dmConversationId);
-    setActiveChannelId(t.channelId);
-
-    const rootAsThreadMsg = {
-      id: t.id,
-      content: t.content,
-      createdAt: t.createdAt,
-      updatedAt: t.updatedAt,
-      parentId: null,
-      threadRootId: null,
-      replyCount: t.replyCount,
-      lastReplyAt: t.lastReplyAt,
-      reactions: t.reactions,
-      files: t.files,
-      sender: t.sender ?? { id: "", dispname: null, avatar: "/uploads/avatar.png" },
+    // ── DM thread reply arrives ──────────────────────────────────────────────
+    const onNewDmThreadMessage = (msg: RawMessage) => {
+      if (!msg.parentId) return; // root message — not a reply
+      setEntries((prev) =>
+        prev.map((e) => {
+          if (e.kind !== "dm" || e.parent.id !== msg.parentId) return e;
+          // Avoid duplicates
+          if (e.replies.some((r) => r.id === msg.id)) return e;
+          return {
+            ...e,
+            replies: [...e.replies, msg],
+            parent: { ...e.parent, replyCount: e.parent.replyCount + 1, lastReplyAt: msg.createdAt },
+          };
+        }),
+      );
     };
 
-    openThread(rootAsThreadMsg as any);
+    // ── Channel thread reply arrives ─────────────────────────────────────────
+    const onNewThreadMessage = (msg: RawMessage) => {
+      if (!msg.parentId) return;
+      setEntries((prev) =>
+        prev.map((e) => {
+          if (e.kind === "dm" || e.parent.id !== msg.parentId) return e;
+          if (e.replies.some((r) => r.id === msg.id)) return e;
+          return {
+            ...e,
+            replies: [...e.replies, msg],
+            parent: { ...e.parent, replyCount: e.parent.replyCount + 1, lastReplyAt: msg.createdAt },
+          };
+        }),
+      );
+    };
 
-    try {
-      let threadMsgs: any[] = [];
-      if (t.kind === "dm" && t.dmConversationId && user?.id && workspaceId) {
-        threadMsgs = await getDmThread(workspaceId, t.dmConversationId, t.id, user.id);
-      } else if (t.channelId) {
-        const res = await api.get(`/api/channels/${t.channelId}/messages/${t.id}/thread`);
-        threadMsgs = safeArray(res.data);
-      }
-      setThreadMessages(safeArray(threadMsgs));
-    } catch {
-      setThreadMessages([rootAsThreadMsg as any]);
-    } finally {
-      setOpeningId(null);
-    }
-  };
+    // ── DM thread root updated (replyCount / lastReplyAt) ────────────────────
+    const onDmThreadUpdated = (updatedRoot: RawMessage) => {
+      setEntries((prev) =>
+        prev.map((e) =>
+          e.kind === "dm" && e.parent.id === updatedRoot.id
+            ? { ...e, parent: { ...e.parent, replyCount: updatedRoot.replyCount, lastReplyAt: updatedRoot.lastReplyAt } }
+            : e,
+        ),
+      );
+    };
+
+    // ── Channel thread root updated ──────────────────────────────────────────
+    const onThreadUpdated = (updatedRoot: RawMessage) => {
+      setEntries((prev) =>
+        prev.map((e) =>
+          e.kind !== "dm" && e.parent.id === updatedRoot.id
+            ? { ...e, parent: { ...e.parent, replyCount: updatedRoot.replyCount, lastReplyAt: updatedRoot.lastReplyAt } }
+            : e,
+        ),
+      );
+    };
+
+    // ── Reaction updated (DM or channel) ────────────────────────────────────
+    const onDmReactionUpdated = (payload: { messageId: string; reactions: ReactionView[] }) => {
+      setEntries((prev) =>
+        prev.map((e) => ({
+          ...e,
+          parent: e.parent.id === payload.messageId ? { ...e.parent, reactions: payload.reactions } : e.parent,
+          replies: e.replies.map((r) =>
+            r.id === payload.messageId ? { ...r, reactions: payload.reactions } : r,
+          ),
+        })),
+      );
+    };
+
+    const onReactionUpdated = (payload: { messageId: string; reactions: ReactionView[] }) => {
+      onDmReactionUpdated(payload); // same shape — reuse
+    };
+
+    // ── Message edited ───────────────────────────────────────────────────────
+    const onDmMessageEdited = (payload: { messageId: string; content: string; updatedAt: string }) => {
+      setEntries((prev) =>
+        prev.map((e) => ({
+          ...e,
+          replies: e.replies.map((r) =>
+            r.id === payload.messageId ? { ...r, content: payload.content, updatedAt: payload.updatedAt } : r,
+          ),
+        })),
+      );
+    };
+
+    const onMessageEdited = (payload: { messageId: string; content: string; updatedAt: string }) => {
+      onDmMessageEdited(payload);
+    };
+
+    // ── Message deleted ──────────────────────────────────────────────────────
+    const onDmMessageDeleted = (payload: { messageId: string }) => {
+      setEntries((prev) =>
+        prev.map((e) => ({
+          ...e,
+          replies: e.replies.filter((r) => r.id !== payload.messageId),
+        })),
+      );
+    };
+
+    const onMessageDeleted = (payload: { messageId: string }) => {
+      onDmMessageDeleted(payload);
+    };
+
+    // ── Profile updated — refresh avatars/names in entries ───────────────────
+    const onProfileUpdated = (data: { userId?: string; id?: string; dispname?: string; avatar?: string }) => {
+      const uid = data?.userId ?? data?.id;
+      if (!uid) return;
+      const patch = (sender: RawMessage["sender"]) => {
+        if (!sender || sender.id !== uid) return sender;
+        return {
+          ...sender,
+          dispname: data.dispname ?? sender.dispname,
+          avatar: data.avatar ?? sender.avatar,
+        };
+      };
+      setEntries((prev) =>
+        prev.map((e) => ({
+          ...e,
+          parent: { ...e.parent, sender: patch(e.parent.sender) },
+          replies: e.replies.map((r) => ({ ...r, sender: patch(r.sender) })),
+        })),
+      );
+    };
+
+    socket.on("new_dm_thread_message", onNewDmThreadMessage);
+    socket.on("new_thread_message",    onNewThreadMessage);
+    socket.on("dm_thread_updated",     onDmThreadUpdated);
+    socket.on("thread_updated",        onThreadUpdated);
+    socket.on("dm_reaction_updated",   onDmReactionUpdated);
+    socket.on("reaction_updated",      onReactionUpdated);
+    socket.on("dmMessageEdited",       onDmMessageEdited);
+    socket.on("messageEdited",         onMessageEdited);
+    socket.on("dmMessageDeleted",      onDmMessageDeleted);
+    socket.on("messageDeleted",        onMessageDeleted);
+    socket.on("updated_profile",       onProfileUpdated);
+
+    return () => {
+      socket.off("new_dm_thread_message", onNewDmThreadMessage);
+      socket.off("new_thread_message",    onNewThreadMessage);
+      socket.off("dm_thread_updated",     onDmThreadUpdated);
+      socket.off("thread_updated",        onThreadUpdated);
+      socket.off("dm_reaction_updated",   onDmReactionUpdated);
+      socket.off("reaction_updated",      onReactionUpdated);
+      socket.off("dmMessageEdited",       onDmMessageEdited);
+      socket.off("messageEdited",         onMessageEdited);
+      socket.off("dmMessageDeleted",      onDmMessageDeleted);
+      socket.off("messageDeleted",        onMessageDeleted);
+      socket.off("updated_profile",       onProfileUpdated);
+    };
+  }, [socket]);
+
+  // ── Stable callbacks passed down to ThreadBlock ────────────────────────────
+
+  const handleReplyAdded = useCallback((parentId: string, reply: RawMessage) => {
+    setEntries((prev) =>
+      prev.map((e) => {
+        if (e.parent.id !== parentId) return e;
+        if (e.replies.some((r) => r.id === reply.id)) return e;
+        return { ...e, replies: [...e.replies, reply] };
+      }),
+    );
+  }, []);
+
+  const handleReplyUpdated = useCallback((messageId: string, content: string, updatedAt: string) => {
+    setEntries((prev) =>
+      prev.map((e) => ({
+        ...e,
+        replies: e.replies.map((r) =>
+          r.id === messageId ? { ...r, content, updatedAt } : r,
+        ),
+      })),
+    );
+  }, []);
+
+  const handleReplyDeleted = useCallback((messageId: string) => {
+    setEntries((prev) =>
+      prev.map((e) => ({
+        ...e,
+        replies: e.replies.filter((r) => r.id !== messageId),
+      })),
+    );
+  }, []);
+
+  const handleReactionUpdated = useCallback((messageId: string, reactions: ReactionView[]) => {
+    setEntries((prev) =>
+      prev.map((e) => ({
+        ...e,
+        parent: e.parent.id === messageId ? { ...e.parent, reactions } : e.parent,
+        replies: e.replies.map((r) => (r.id === messageId ? { ...r, reactions } : r)),
+      })),
+    );
+  }, []);
+
+  // ── Classify ───────────────────────────────────────────────────────────────
+  const dmEntries      = useMemo(() => entries.filter((e) => e.kind === "dm"),      [entries]);
+  const publicEntries  = useMemo(() => entries.filter((e) => e.kind === "public"),  [entries]);
+  const privateEntries = useMemo(() => entries.filter((e) => e.kind === "private"), [entries]);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -195,7 +525,7 @@ export default function ThreadsPage() {
     );
   }
 
-  if (threads.length === 0) {
+  if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
         <span className="text-4xl">💬</span>
@@ -205,138 +535,43 @@ export default function ThreadsPage() {
     );
   }
 
+  const blockProps = {
+    currentUserId: user?.id,
+    onReplyAdded: handleReplyAdded,
+    onReplyUpdated: handleReplyUpdated,
+    onReplyDeleted: handleReplyDeleted,
+    onReactionUpdated: handleReactionUpdated,
+  };
+
   return (
-    <div className="flex h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 min-w-0">
-        <h2 className="text-xl font-bold text-gray-800">Threads</h2>
-
-        {dmThreads.length > 0 && (
-          <Section title="Direct Messages">
-            {dmThreads.map((t) => (
-              <ThreadCard
-                key={t.id}
-                thread={t}
-                isOpening={openingId === t.id}
-                isSelected={selectedMessage?.id === t.id}
-                onOpen={handleOpenThread}
-              />
-            ))}
-          </Section>
-        )}
-
-        {publicThreads.length > 0 && (
-          <Section title="Public Channels">
-            {publicThreads.map((t) => (
-              <ThreadCard
-                key={t.id}
-                thread={t}
-                isOpening={openingId === t.id}
-                isSelected={selectedMessage?.id === t.id}
-                onOpen={handleOpenThread}
-              />
-            ))}
-          </Section>
-        )}
-
-        {privateThreads.length > 0 && (
-          <Section title="Private Channels">
-            {privateThreads.map((t) => (
-              <ThreadCard
-                key={t.id}
-                thread={t}
-                isOpening={openingId === t.id}
-                isSelected={selectedMessage?.id === t.id}
-                onOpen={handleOpenThread}
-              />
-            ))}
-          </Section>
-        )}
+    <div className="h-full overflow-y-auto bg-white">
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-3">
+        <h2 className="text-lg font-bold text-gray-900">Threads</h2>
       </div>
 
-      {isOpen && selectedMessage && (
-        <div
-          className="relative shrink-0"
-          style={{ width: `${threadWidth}px`, minWidth: `${THREAD_MIN}px`, maxWidth: `${THREAD_MAX}px` }}
-        >
-          <div
-            onMouseDown={onDragStart}
-            className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-gray-300/50 transition-colors z-10"
-          />
-          <Thread
-            onCloseThread={closeThread}
-            userData={user}
-            channelId={activeChannelId}
-            dmConversationId={activeDmConvId}
-            workspaceId={workspaceId}
-          />
-        </div>
+      {dmEntries.length > 0 && (
+        <Section title="Direct Messages">
+          {dmEntries.map((e) => (
+            <ThreadBlock key={e.parent.id} entry={e} {...blockProps} />
+          ))}
+        </Section>
+      )}
+
+      {publicEntries.length > 0 && (
+        <Section title="Public Channels">
+          {publicEntries.map((e) => (
+            <ThreadBlock key={e.parent.id} entry={e} {...blockProps} />
+          ))}
+        </Section>
+      )}
+
+      {privateEntries.length > 0 && (
+        <Section title="Private Channels">
+          {privateEntries.map((e) => (
+            <ThreadBlock key={e.parent.id} entry={e} {...blockProps} />
+          ))}
+        </Section>
       )}
     </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">
-        {title}
-      </h3>
-      <div className="space-y-1">{children}</div>
-    </div>
-  );
-}
-
-function ThreadCard({
-  thread,
-  isOpening,
-  isSelected,
-  onOpen,
-}: {
-  thread: ThreadParent;
-  isOpening: boolean;
-  isSelected: boolean;
-  onOpen: (t: ThreadParent) => void;
-}) {
-  const preview = thread.content.replace(/<[^>]*>/g, "").trim() || "(attachment)";
-  const truncated = preview.length > 120 ? preview.slice(0, 120) + "…" : preview;
-  const contextLabel =
-    thread.kind === "dm"
-      ? `DM · ${thread.otherUserName ?? "Direct Message"}`
-      : `#${thread.channelName ?? thread.channelId}`;
-
-  return (
-    <button
-      onClick={() => onOpen(thread)}
-      disabled={isOpening}
-      className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${
-        isSelected
-          ? "border-[#007a5a]/40 bg-[#007a5a]/5"
-          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-      } ${isOpening ? "opacity-60 cursor-wait" : ""}`}
-    >
-      <p className="text-xs text-gray-400 mb-1">{contextLabel}</p>
-      <div className="flex items-start gap-2">
-        <img
-          src={getAvatarUrl(thread.sender?.avatar)}
-          alt={getDisplayName(thread.sender)}
-          className="w-7 h-7 rounded-md object-cover shrink-0 mt-0.5"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = getAvatarUrl(null); }}
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm font-semibold text-gray-800 truncate">
-              {getDisplayName(thread.sender)}
-            </span>
-            <span className="text-xs text-gray-400 shrink-0">
-              {formatLastReply(thread.lastReplyAt)}
-            </span>
-          </div>
-          <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">{truncated}</p>
-        </div>
-      </div>
-      <p className="text-xs text-[#007a5a] font-medium mt-2">
-        {thread.replyCount} {thread.replyCount === 1 ? "reply" : "replies"}
-      </p>
-    </button>
   );
 }
