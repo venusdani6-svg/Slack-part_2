@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { IconType } from "react-icons";
@@ -11,6 +12,7 @@ type Ctx = {
   value: string;
   setValue: (v: string) => void;
 };
+
 
 const DirectoriesDropdownBtnCtx = createContext<Ctx | null>(null);
 
@@ -88,13 +90,17 @@ DirectoriesDropdownBtn.Check = function Check({ label }: { label: string }) {
   );
 };
 
-DirectoriesDropdownBtn.Radio = function Radio({ label, icon: Icon }: { label: string; icon?: IconType }) {
+DirectoriesDropdownBtn.Radio = function Radio({ label, icon: Icon, onClick }: { label: string; icon?: IconType; onClick?: () => void;}) {
   const { value, setValue, setOpen } = useDropdown();
   const selected = value === label;
-
+  const handleClick = () => {
+    setValue(label);
+    setOpen(false);
+    onClick?.(); // ✅ IMPORTANT: call parent click
+  };
   return (
     <div
-      onClick={() => { setValue(label); setOpen(false); }}
+      onClick={handleClick}
       className="flex items-center gap-[10px] px-[8px] py-[6px] rounded-[6px] hover:bg-[#e1e1e1] cursor-pointer"
     >
       <div className={`w-[16px] h-[16px] flex items-center justify-center rounded-[4px] border ${selected ? "bg-[#e1e1e1] border-[#38bdf8]" : "border-[#6b7280]"}`}>

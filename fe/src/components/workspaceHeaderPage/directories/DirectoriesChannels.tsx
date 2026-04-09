@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
- 
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
@@ -19,91 +19,134 @@ import { IconType } from "react-icons";
 
 
 export default function DirectoriesChannel() {
-          const { socket } = useSocket();
-  const [channels, setChannels] = useState<any[]>([]);
+    const { socket } = useSocket();
+    const [channels, setChannels] = useState<any[]>([]);
+    const [channelFilter, setChannelFilter] = useState("all");
+    const [typeFilter, setTypeFilter] = useState("all");
+    const [sortType, setSortType] = useState("recommended");
 
-  const workspaceId = useWorkspaceId();
-  const { user } = useAuth();
-  const userId = user?.id;
+    const workspaceId = useWorkspaceId();
+    const { user } = useAuth();
+    const userId = user?.id;
 
     const normalizeChannel = useCallback(
-    (ch: any) => ({
-        id: ch.id,
-        title: ch.name,
-        label: ch.name,
-        comment: ch.channelType,
-        members: ch.members?.length || 0,
-        joined: ch.members?.some((m: any) => m.id === userId),
-    }),
-    [userId]
+        (ch: any) => ({
+            id: ch.id,
+            title: ch.name,
+            label: ch.name,
+            comment: ch.channelType,
+            members: ch.members?.length || 0,
+            joined: ch.members?.some((m: any) => m.id === userId),
+        }),
+        [userId]
     );
 
-   useEffect(() => {
-      if (!socket || !workspaceId || !userId) return;
-  
-      // JOIN ROOM
-      socket.emit("join_workspace", { workspaceId });
-  
-      // REQUEST CHANNEL LIST with userId for proper filtering
-      socket.emit("channel:list", { workspaceId, userId });
-  
-      // LISTENER: LIST
-      const handleList = (data: any[]) => {
-        setChannels(data.map(normalizeChannel));
-        // setLoading(false);
-      };
-  
-      // LISTENER: CREATE — immediately add new channel to state
-      const handleCreated = (newChannel: any) => {
-        const normalized = normalizeChannel(newChannel);
+    useEffect(() => {
+        if (!socket || !workspaceId || !userId) return;
 
-        setChannels((prev) =>
-        prev.find((c) => c.id === normalized.id)
-          ? prev
-          : [...prev, normalized]
-      );
-    };
-  
-      // LISTENER: DELETE
-      const handleDeleted = ({ channelId }: { channelId: string }) => {
-        setChannels((prev) =>
-          prev.filter((c) => c.id !== channelId)
-        );
-      };
-  
-      // LISTENER: UPDATE
-      const handleUpdated = (updatedChannel: any) => {
-        const normalized = normalizeChannel(updatedChannel);
+        // JOIN ROOM
+        socket.emit("join_workspace", { workspaceId });
 
-      setChannels((prev) =>
-        prev.map((c) => (c.id === normalized.id ? normalized : c))
-      );
-    };
-  
-      socket.on("channel:list", handleList);
-      socket.on("channel:created", handleCreated);
-      socket.on("channel:deleted", handleDeleted);
-      socket.on("channel:updated", handleUpdated);
-  
-      // ✅ CLEANUP (VERY IMPORTANT)
-      return () => {
-        socket.off("channel:list", handleList);
-        socket.off("channel:created", handleCreated);
-        socket.off("channel:deleted", handleDeleted);
-        socket.off("channel:updated", handleUpdated);
-      };
+        // REQUEST CHANNEL LIST with userId for proper filtering
+        socket.emit("channel:list", { workspaceId, userId });
+
+        // LISTENER: LIST
+        const handleList = (data: any[]) => {
+            setChannels(data.map(normalizeChannel));
+            // setLoading(false);
+        };
+
+        // LISTENER: CREATE — immediately add new channel to state
+        const handleCreated = (newChannel: any) => {
+            const normalized = normalizeChannel(newChannel);
+
+            setChannels((prev) =>
+                prev.find((c) => c.id === normalized.id)
+                    ? prev
+                    : [...prev, normalized]
+            );
+        };
+
+        // LISTENER: DELETE
+        const handleDeleted = ({ channelId }: { channelId: string }) => {
+            setChannels((prev) =>
+                prev.filter((c) => c.id !== channelId)
+            );
+        };
+
+        // LISTENER: UPDATE
+        const handleUpdated = (updatedChannel: any) => {
+            const normalized = normalizeChannel(updatedChannel);
+
+            setChannels((prev) =>
+                prev.map((c) => (c.id === normalized.id ? normalized : c))
+            );
+        };
+
+        socket.on("channel:list", handleList);
+        socket.on("channel:created", handleCreated);
+        socket.on("channel:deleted", handleDeleted);
+        socket.on("channel:updated", handleUpdated);
+
+        // ✅ CLEANUP (VERY IMPORTANT)
+        return () => {
+            socket.off("channel:list", handleList);
+            socket.off("channel:created", handleCreated);
+            socket.off("channel:deleted", handleDeleted);
+            socket.off("channel:updated", handleUpdated);
+        };
     }, [socket, workspaceId, userId]); // ✅ FIXED: Added userId
-  
+
 
     const [search, setSearch] = useState("");
 
     const filteredData = useMemo(() => {
+        let result = [...channels];
+
         const q = search.toLowerCase();
 
-        return channels.filter((item) =>
-    item.title.toLowerCase().includes(q)
-  );
-}, [search, channels]);
+        // ✅ SEARCH
+        result = result.filter((item) =>
+            item.title.toLowerCase().includes(q)
+        );
+
+        // ✅ JOIN FILTER
+        if (channelFilter === "joined") {
+            result = result.filter((item) => item.joined);
+        }
+
+        if (channelFilter === "not_joined") {
+            result = result.filter((item) => !item.joined);
+        }
+
+        // ✅ TYPE FILTER (NEW)
+        if (typeFilter === "public") {
+            result = result.filter((item) => item.comment === "public");
+        }
+
+        if (typeFilter === "private") {
+            result = result.filter((item) => item.comment === "private");
+        }
+
+        // ✅ SORTING (NEW)
+        if (sortType === "az") {
+            result.sort((a, b) => a.title.localeCompare(b.title));
+        }
+
+        if (sortType === "za") {
+            result.sort((a, b) => b.title.localeCompare(a.title));
+        }
+
+        if (sortType === "members_desc") {
+            result.sort((a, b) => b.members - a.members);
+        }
+
+        if (sortType === "members_asc") {
+            result.sort((a, b) => a.members - b.members);
+        }
+
+        return result;
+    }, [search, channels, channelFilter, typeFilter, sortType]);
 
     return (
         <div className="w-full h-full overflow-y-scroll">
@@ -131,7 +174,7 @@ export default function DirectoriesChannel() {
                         </span>
                     }
                 />
-             
+
             </div>
             <BannerSection />
             <div className="h-[calc(100vh-250px)] flex flex-col items-center min-h-[60vh] sidebar-scroll">
@@ -141,7 +184,15 @@ export default function DirectoriesChannel() {
                             <DirectoriesDropdownBtn.Trigger placeholder="All channels" />
                             <DirectoriesDropdownBtn.Content>
                                 {Channel.Allchannels.map((item, i) => (
-                                    <DirectoriesDropdownBtn.Radio key={i} label={item.label} />
+                                    <DirectoriesDropdownBtn.Radio
+                                        key={i}
+                                        label={item.label}
+                                        onClick={() => {
+                                            if (item.label === "All channels") setChannelFilter("all");
+                                            if (item.label === "My channels") setChannelFilter("joined");
+                                            if (item.label === "Other channels") setChannelFilter("not_joined");
+                                        }}
+                                    />
                                 ))}
                             </DirectoriesDropdownBtn.Content>
                         </DirectoriesDropdownBtn>
@@ -154,6 +205,11 @@ export default function DirectoriesChannel() {
                                         key={i}
                                         label={item.label}
                                         icon={item.icon}
+                                        onClick={() => {
+                                            if (item.label === "Any channel type") setTypeFilter("all");
+                                            if (item.label === "public") setTypeFilter("public");
+                                            if (item.label === "Private") setTypeFilter("private");
+                                        }}
                                     />
                                 ))}
                             </DirectoriesDropdownBtn.Content>
@@ -186,7 +242,17 @@ export default function DirectoriesChannel() {
                         <DirectoriesDropdownBtn.Trigger placeholder="Most recommended" />
                         <DirectoriesDropdownBtn.Content>
                             {Channel.Mostrecommended.map((item, i) => (
-                                <DirectoriesDropdownBtn.Radio key={i} label={item.label} />
+                                <DirectoriesDropdownBtn.Radio
+                                    key={i}
+                                    label={item.label}
+                                    onClick={() => {
+                                        if (item.label === "A to Z") setSortType("az");
+                                        if (item.label === "Z to A") setSortType("za");
+                                        if (item.label === "Most members") setSortType("members_desc");
+                                        if (item.label === "Fewest member") setSortType("members_asc");
+                                        if (item.label === "Most recommended") setSortType("recommended");
+                                    }}
+                                />
                             ))}
                         </DirectoriesDropdownBtn.Content>
                     </DirectoriesDropdownBtn>
