@@ -46,10 +46,9 @@ export default function DirectoriesChannelsItem({
       onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="w-full h-[80px] flex items-center relative px-[12px] transition-all duration-[120ms] cursor-pointer border-[1px] border-[black]"
-    >
-      <div className="ml-[10px]">
-        <div className="w-[100%] h-[60%]">
+      className="w-full h-[72px] flex items-center relative px-[16px] transition-all duration-[120ms] cursor-pointer border-b border-r border-l border-[#e1e1e1] hover:bg-[#f8f8f8]">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto">
           <div className="flex items-center gap-[10px]">
             {comment === "public" ? <FiHash size={12} className="text-black" /> : <FaLock size={12} className="text-black" />}
             <div className="flex flex-col justify-center">
@@ -69,7 +68,7 @@ export default function DirectoriesChannelsItem({
         </div>
       </div>
 
-      <div className="flex absolute right-[10px] items-center gap-[12px]">
+      <div className="flex absolute right-[10px] items-center gap-[12px] flex-wrap">
         {hovered && (
           <div className="flex items-center gap-[8px]">
             <CustomButton label="Open in Home" showIcon={false} bgColor="bg-transparent" hoverColor="hover:bg-[#e1e1e1]" activeColor="active:bg-[#a1a1a1]" textColor="text-[#313131]" paddingX="px-[12px]" height="h-[32px]" radius="rounded-[6px]" />

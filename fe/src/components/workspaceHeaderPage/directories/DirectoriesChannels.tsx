@@ -11,15 +11,17 @@ import { Channel } from "./domi";
 import { FiLock } from "react-icons/fi";
 import DirectoriesChannelsItem from "./DirectoriesChannelsItem";
 import BannerSection from "./BannerSection";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/context/Authcontext";
 import { useSocket } from "@/providers/SocketProvider";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
+import CreateChannelModal from "@/components/ui/modal/CreateChannelModal";
 
 export default function DirectoriesChannel() {
     const { socket } = useSocket();
     const { user } = useAuth();
     const workspaceId = useWorkspaceId();
+    const listRef = useRef<HTMLDivElement>(null);
 
     const userId = user?.id;
 
@@ -29,6 +31,14 @@ export default function DirectoriesChannel() {
     const [channelFilter, setChannelFilter] = useState<"all" | "joined" | "not_joined">("all");
     const [typeFilter, setTypeFilter] = useState<"all" | "public" | "private">("all");
     const [sortType, setSortType] = useState<"recommended" | "az" | "za" | "members_desc" | "members_asc">("recommended");
+    const [open, setOpen] = useState(false);
+    const handleOpenModal = useCallback(() => {
+        setOpen(true);
+    }, []);
+
+    const handleCloseModal = useCallback(() => {
+        setOpen(false);
+    }, []);
 
     // ✅ NORMALIZER
     const normalizeChannel = useCallback(
@@ -82,6 +92,14 @@ export default function DirectoriesChannel() {
         };
     }, [socket, workspaceId, userId, normalizeChannel]);
 
+    const prevLength = useRef(0);
+
+    useEffect(() => {
+        if (listRef.current && channels.length > prevLength.current) {
+            listRef.current.scrollTop = listRef.current.scrollHeight;
+        }
+        prevLength.current = channels.length;
+    }, [channels]);
     // ✅ FILTER CONFIG (NO MORE if-else)
     const filterMap = {
         joined: (c: any) => c.joined,
@@ -131,16 +149,19 @@ export default function DirectoriesChannel() {
     }, [channels, search, channelFilter, typeFilter, sortType]);
 
     return (
-        <div className="w-full h-full overflow-y-scroll">
+        <div className="w-full h-full flex flex-col flex-1 min-h-0 ">
             {/* TOP */}
-            <div className="w-full px-[250px] flex justify-between mb-[20px]">
+            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 
+                flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-[12px]">
                 <FileSearch
                     value={search}
                     placeholder="Search channels"
                     onChange={(e) => setSearch(e.target.value)}
                 />
-                <div className="mt-[21px] ml-[5px]">
-                    <CustomButton label="Create Channel"
+
+                <div className="mt-2 sm:mt-[21px]">
+                    <CustomButton
+                        label="Create Channel"
                         showIcon={false}
                         width="w-auto"
                         height="h-[40px]"
@@ -148,124 +169,137 @@ export default function DirectoriesChannel() {
                         bgColor="bg-transparent"
                         hoverColor="hover:bg-[#e1e1e1]"
                         activeColor="active:bg-[#c1c11]"
-                        textColor="text-[#white]" />
+                        textColor="text-[#313131]"
+                        onClick={handleOpenModal}
+                    />
                 </div>
             </div>
+            <div className="h-[calc(100vh-150px)] flex flex-col items-center min-h-[60vh] overflow-y-scroll overflow-x-hidden sidebar-scroll">
+                {/* BANNER */}
+                <div className="w-full">
+                    <BannerSection handleOpenModal={handleOpenModal} />
+                </div>
 
-            <BannerSection />
+                {/* FILTERS */}
+                <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 
+                flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between mb-[12px]">
+                    <div className="flex flex-wrap gap-[8px] ">
+                        <DirectoriesDropdownBtn>
+                            <DirectoriesDropdownBtn.Trigger placeholder="All channels" />
+                            <DirectoriesDropdownBtn.Content>
+                                {Channel.Allchannels.map((item, i) => (
+                                    <DirectoriesDropdownBtn.Radio
+                                        key={i}
+                                        label={item.label}
+                                        onClick={() =>
+                                            setChannelFilter(
+                                                item.label === "My channels"
+                                                    ? "joined"
+                                                    : item.label === "Other channels"
+                                                        ? "not_joined"
+                                                        : "all"
+                                            )
+                                        }
+                                    />
+                                ))}
+                            </DirectoriesDropdownBtn.Content>
+                        </DirectoriesDropdownBtn>
 
-            {/* FILTERS */}
-            <div className="px-[250px] flex justify-between mb-[20px]">
-                <div className="flex gap-[8px]">
+                        <DirectoriesDropdownBtn>
+                            <DirectoriesDropdownBtn.Trigger placeholder="Any channel type" />
+                            <DirectoriesDropdownBtn.Content>
+                                {Channel.anychanneltype.map((item, i) => (
+                                    <DirectoriesDropdownBtn.Radio
+                                        key={i}
+                                        label={item.label}
+                                        icon={item.icon}
+                                        onClick={() =>
+                                            setTypeFilter(
+                                                item.label === "public"
+                                                    ? "public"
+                                                    : item.label === "Private"
+                                                        ? "private"
+                                                        : "all"
+                                            )
+                                        }
+                                    />
+                                ))}
+                            </DirectoriesDropdownBtn.Content>
+                        </DirectoriesDropdownBtn>
 
-                    {/* CHANNEL FILTER */}
-                    <DirectoriesDropdownBtn>
-                        <DirectoriesDropdownBtn.Trigger placeholder="All channels" />
-                        <DirectoriesDropdownBtn.Content>
-                            {Channel.Allchannels.map((item, i) => (
-                                <DirectoriesDropdownBtn.Radio
-                                    key={i}
-                                    label={item.label}
-                                    onClick={() =>
-                                        setChannelFilter(
-                                            item.label === "My channels"
-                                                ? "joined"
-                                                : item.label === "Other channels"
-                                                    ? "not_joined"
-                                                    : "all"
-                                        )
-                                    }
-                                />
-                            ))}
-                        </DirectoriesDropdownBtn.Content>
-                    </DirectoriesDropdownBtn>
+                        <DirectoriesDropdownBtn>
+                            <DirectoriesDropdownBtn.Trigger placeholder="Workspaces" />
+                            <DirectoriesDropdownBtn.Content>
+                                <DirectoriesDropdownBtn.Search placeholder="Search..." />
+                                <DirectoriesDropdownBtn.Radio label="Workspaces" />
+                            </DirectoriesDropdownBtn.Content>
+                        </DirectoriesDropdownBtn>
 
-                    {/* TYPE FILTER */}
-                    <DirectoriesDropdownBtn>
-                        <DirectoriesDropdownBtn.Trigger placeholder="Any type" />
-                        <DirectoriesDropdownBtn.Content>
-                            {Channel.anychanneltype.map((item, i) => (
-                                <DirectoriesDropdownBtn.Radio
-                                    key={i}
-                                    label={item.label}
-                                    icon={item.icon}
-                                    onClick={() =>
-                                        setTypeFilter(
-                                            item.label === "public"
-                                                ? "public"
-                                                : item.label === "Private"
-                                                    ? "private"
-                                                    : "all"
-                                        )
-                                    }
-                                />
-                            ))}
-                        </DirectoriesDropdownBtn.Content>
-                    </DirectoriesDropdownBtn>
-                    <DirectoriesDropdownBtn>
-                        <DirectoriesDropdownBtn.Trigger placeholder="Workspaces" />
-                        <DirectoriesDropdownBtn.Content>
-                            <DirectoriesDropdownBtn.Search placeholder="Search..." />
-                            <DirectoriesDropdownBtn.Radio label="Workspaces" />
-                        </DirectoriesDropdownBtn.Content>
-                    </DirectoriesDropdownBtn>
+                        <DirectoriesDropdownBtn>
+                            <DirectoriesDropdownBtn.Trigger placeholder="Organization" />
+                            <DirectoriesDropdownBtn.Content>
+                                <DirectoriesDropdownBtn.Search placeholder="Search..." />
+                            </DirectoriesDropdownBtn.Content>
+                        </DirectoriesDropdownBtn>
+                        <div className="flex items-center gap-[6px] ml-[8px] text-[#313131] text-[14px] font-[500] cursor-pointer">
+                            <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] fill-[#38bdf8]">
+                                <path d="M3 5h18v2H3V5zm4 6h10v2H7v-2zm3 6h4v2h-4v-2z" />
+                            </svg>
+                            <span className="text-[#1d9bd1] font-400">Filters</span>
+                        </div>
+                    </div>
 
-                    <DirectoriesDropdownBtn>
-                        <DirectoriesDropdownBtn.Trigger placeholder="Organization" />
-                        <DirectoriesDropdownBtn.Content>
-                            <DirectoriesDropdownBtn.Search placeholder="Search..." />
-                        </DirectoriesDropdownBtn.Content>
-                    </DirectoriesDropdownBtn>
-
-                    <div className="flex items-center gap-[6px] ml-[8px] text-[#313131] text-[14px] font-[500] cursor-pointer">
-                        <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] fill-[#38bdf8]">
-                            <path d="M3 5h18v2H3V5zm4 6h10v2H7v-2zm3 6h4v2h-4v-2z" />
-                        </svg>
-                        <span>Filters</span>
+                    {/* SORT */}
+                    <div className="flex justify-start lg:justify-end">
+                        <DirectoriesDropdownBtn>
+                            <DirectoriesDropdownBtn.Trigger placeholder="Most recommended" />
+                            <DirectoriesDropdownBtn.Content>
+                                {Channel.Mostrecommended.map((item, i) => (
+                                    <DirectoriesDropdownBtn.Radio
+                                        key={i}
+                                        label={item.label}
+                                        onClick={() =>
+                                            setSortType(
+                                                item.label === "A to Z"
+                                                    ? "az"
+                                                    : item.label === "Z to A"
+                                                        ? "za"
+                                                        : item.label === "Most members"
+                                                            ? "members_desc"
+                                                            : item.label === "Fewest member"
+                                                                ? "members_asc"
+                                                                : "recommended"
+                                            )
+                                        }
+                                    />
+                                ))}
+                            </DirectoriesDropdownBtn.Content>
+                        </DirectoriesDropdownBtn>
                     </div>
                 </div>
 
-                {/* SORT */}
-                <DirectoriesDropdownBtn>
-                    <DirectoriesDropdownBtn.Trigger placeholder="Sort" />
-                    <DirectoriesDropdownBtn.Content>
-                        {Channel.Mostrecommended.map((item, i) => (
-                            <DirectoriesDropdownBtn.Radio
-                                key={i}
-                                label={item.label}
-                                onClick={() =>
-                                    setSortType(
-                                        item.label === "A to Z"
-                                            ? "az"
-                                            : item.label === "Z to A"
-                                                ? "za"
-                                                : item.label === "Most members"
-                                                    ? "members_desc"
-                                                    : item.label === "Fewest member"
-                                                        ? "members_asc"
-                                                        : "recommended"
-                                    )
-                                }
-                            />
-                        ))}
-                    </DirectoriesDropdownBtn.Content>
-                </DirectoriesDropdownBtn>
-            </div>
+                {/* LIST */}
+                <div className="w-full  px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 flex-1 min-h-0 flex flex-col">
 
-            {/* LIST */}
-            <div className="w-full px-[250px]">
-                <div className="w-full max-h-[60vh] min-h-[100px] overflow-y-auto">
-                    {filteredData.map((item) => (
-                        <DirectoriesChannelsItem
-                            key={item.id}
-                            id={item.id}
-                            title={item.title}
-                            comment={item.comment}
-                            members={item.members}
-                            joined={item.joined}
-                        />
-                    ))}
+                    <div
+                        ref={listRef}
+                        className="w-full flex-1 min-h-[300px] py-[10px] border-t border-[#e1e1e1] rounded-[12px]"
+                    >
+                        {filteredData.map((item) => (
+                            <DirectoriesChannelsItem key={item.id} {...item} />
+                        ))}
+                    </div>
+
                 </div>
+
+                {workspaceId && userId && (
+                    <CreateChannelModal
+                        isOpen={open}
+                        onClose={handleCloseModal}
+                        workspaceId={workspaceId}
+                        userId={userId}
+                    />
+                )}
             </div>
         </div>
     );
