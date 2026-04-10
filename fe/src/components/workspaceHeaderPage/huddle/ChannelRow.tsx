@@ -35,18 +35,18 @@ export default function ChannelRow({ channels }: Props) {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="border border-[#aca8a8] rounded-md">
       {channels.map((channel) => (
         <div
           key={channel.id}
           onClick={() => openModal(channel)}
-          className="group w-full h-15 flex items-center justify-between px-3 transition-all duration-120 cursor-pointer border rounded-md border-[#aca8a8]"
+          className="group w-full h-15 flex items-center justify-between px-3 transition-all duration-120 cursor-pointer border-b border-[#aca8a8]"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-9.5 h-9.5 text-[#313131] text-[24px] flex justify-center items-center rounded-md bg-[#e1e1e1]">
               {channel.isPrivate ? "🔒" : "#"}
             </div>
-            <div className="text-[#313131] text-[15px] font-medium">{channel.name}</div>
+            <div className="text-[#313131] text-[15px] font-medium"># {channel.name}</div>
           </div>
 
           <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
