@@ -1,17 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useAuth } from "@/context/Authcontext";
 import { usePresenceStore } from "@/store/presence-store";
 import { HuddleCustomButton } from "./HuddleCustomButton";
 import ProfileSidebar from "@/components/WorkSpace/ProfileSidebar";
 import type { DmUser } from "./useDmUsers";
 import { resolveAvatar } from "./useDmUsers";
 
-type Props = {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type UserCardProps = {
+  /** The DM peer (right side) */
   user: DmUser;
-  /** Called when "Huddle" button or card body is clicked — opens ChannelModal pre-filled */
+  /** Opens ChannelModal pre-filled with this user */
   onStartHuddle?: (user: DmUser) => void;
 };
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const BG_IMAGES = [
   "/Newimg/JPG/LiskFeng-Star_Gazing.jpg",
@@ -19,31 +25,89 @@ const BG_IMAGES = [
   "/Newimg/JPG/LuisMendo-Garden_Office.jpg",
 ];
 
+// Module-level helper — called only by useState lazy initializer, never during render
+function pickBg(): string {
+  return BG_IMAGES[Math.floor(Math.random() * BG_IMAGES.length)];
+}
+
+const BACKEND = process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:5050";
+
+function resolveCurrentUserAvatar(src?: string | null): string {
+  if (!src) return "/Untitled.png";
+  if (src.startsWith("http")) return src;
+  return `${BACKEND}${src}`;
+}
+
+// ─── Avatar sub-component ─────────────────────────────────────────────────────
+
+type AvatarProps = {
+  src: string;
+  name: string;
+  isOnline: boolean;
+  onClick: (e: React.MouseEvent) => void;
+};
+
+function Avatar({ src, name, isOnline, onClick }: AvatarProps) {
+  const dot = isOnline ? "bg-[#2bac76]" : "bg-[#e8a838]";
+  return (
+    <div className="relative cursor-pointer" onClick={onClick}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={name}
+        className="w-14 h-14 rounded-lg object-cover border-2 border-white shadow-md"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/Untitled.png"; }}
+      />
+      <span
+        className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${dot}`}
+        title={isOnline ? "Active" : "Away"}
+      />
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 /**
- * Fine-grained presence subscription — only this card re-renders when
- * this specific user's online status changes.
+ * Dual-profile DM card.
+ *
+ * Layout:
+ *   ┌─────────────────────────────────────────┐
+ *   │  [bg image]                             │
+ *   │    [you avatar]    [dm user avatar]     │
+ *   ├─────────────────────────────────────────┤
+ *   │  You · Active    DmUser · Away  [Huddle]│
+ *   └─────────────────────────────────────────┘
  *
  * Click zones:
- *  - Avatar / name area  → opens ProfileSidebar (read-only view)
- *  - "Huddle" button     → calls onStartHuddle (opens ChannelModal pre-filled)
- *  - Card body           → calls onStartHuddle (opens ChannelModal)
+ *  - Left avatar / name  → ProfileSidebar for current user (editable)
+ *  - Right avatar / name → ProfileSidebar for DM user (read-only)
+ *  - "Huddle" button     → onStartHuddle(user)
+ *  - Card body           → onStartHuddle(user)
  */
-export function UserCard({ user, onStartHuddle }: Props) {
-  const isOnline = usePresenceStore((s) => s.isOnline(user.id));
+export function UserCard({ user, onStartHuddle }: UserCardProps) {
+  const { user: currentUser } = useAuth();
+
+  // Fine-grained subscriptions — each card only re-renders for its own users
+  const currentOnline = usePresenceStore((s) => s.isOnline(currentUser?.id ?? ""));
+  const dmOnline      = usePresenceStore((s) => s.isOnline(user.id));
+
   const [hovered, setHovered] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentSidebarOpen, setCurrentSidebarOpen] = useState(false);
+  const [dmSidebarOpen, setDmSidebarOpen] = useState(false);
 
-  // Stable random background per card mount
-  const bgImage = useMemo(
-    () => BG_IMAGES[Math.floor(Math.random() * BG_IMAGES.length)],
-    []
-  );
+  // useState lazy initializer: pickBg() runs once on mount, never on re-render
+  const [bgImage] = useState<string>(pickBg);
 
-  const statusDot   = isOnline ? "bg-[#2bac76]" : "bg-[#e8a838]";
-  const statusLabel = isOnline ? "Active" : "Away";
+  const currentName   = currentUser?.dispname ?? currentUser?.fullname ?? "You";
+  const currentAvatar = resolveCurrentUserAvatar(currentUser?.avatar);
+  const dmAvatar      = resolveAvatar(user.avatar);
 
-  // ProfileSidebar expects the same shape as AuthContext user
-  const sidebarUserdata = {
+  const currentSidebarData = currentUser
+    ? { id: currentUser.id, email: currentUser.email, fullname: currentUser.fullname, dispname: currentUser.dispname, avatar: currentUser.avatar }
+    : null;
+
+  const dmSidebarData = {
     id: user.id,
     email: user.email,
     fullname: user.name,
@@ -53,62 +117,72 @@ export function UserCard({ user, onStartHuddle }: Props) {
 
   return (
     <>
-      {/* Card — clicking the body opens ChannelModal */}
+      {/* ── Card ── */}
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={() => onStartHuddle?.(user)}
-        className="relative bg-white border border-[#e8e8e8] rounded-lg overflow-hidden w-full cursor-pointer transition-shadow duration-150 hover:shadow-md"
+        className="relative bg-white border border-[#e8e8e8] rounded-xl overflow-hidden w-full cursor-pointer transition-shadow duration-150 hover:shadow-md"
       >
-        {/* Top visual — background image + avatar */}
-        <div className="relative h-27.5 bg-[#1d1c1d] overflow-hidden">
+        {/* Background image banner */}
+        <div className="relative h-32 bg-[#1d1c1d] overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+          <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />
 
-          {/* Avatar — clicking opens ProfileSidebar, not ChannelModal */}
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            onClick={(e) => { e.stopPropagation(); setSidebarOpen(true); }}
-          >
-            <div className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={resolveAvatar(user.avatar)}
-                alt={user.name}
-                className="w-15.5 h-15.5 rounded-lg object-cover border-2 border-white shadow-md"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/Untitled.png"; }}
-              />
-              <span
-                className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${statusDot}`}
-                title={statusLabel}
-              />
-            </div>
+          {/* Two avatars side by side, centred */}
+          <div className="absolute inset-0 flex items-center justify-center gap-3">
+            {/* Current user avatar */}
+            <Avatar
+              src={currentAvatar}
+              name={currentName}
+              isOnline={currentOnline}
+              onClick={(e) => { e.stopPropagation(); setCurrentSidebarOpen(true); }}
+            />
+
+            {/* Divider */}
+            {/* <span className="text-white/60 text-lg font-light select-none">↔</span> */}
+
+            {/* DM user avatar */}
+            <Avatar
+              src={dmAvatar}
+              name={user.name}
+              isOnline={dmOnline}
+              onClick={(e) => { e.stopPropagation(); setDmSidebarOpen(true); }}
+            />
           </div>
         </div>
 
-        {/* Bottom info row */}
+        {/* Info row */}
         <div className="px-3 py-2.5 flex items-center justify-between min-h-14">
-          {/* Name — clicking opens ProfileSidebar */}
-          <div
-            className="min-w-0"
-            onClick={(e) => { e.stopPropagation(); setSidebarOpen(true); }}
-          >
-            <div className="flex items-center gap-1.5">
-              <p className="text-[13px] font-semibold text-[#1d1c1d] truncate max-w-27.5">{user.name}</p>
-              {isOnline && <span className="w-2 h-2 bg-[#2bac76] rounded-full shrink-0" />}
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Current user info */}
+            <div
+              className="min-w-0 cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); setCurrentSidebarOpen(true); }}
+            >
             </div>
-            <p className="text-[11px] text-[#616061] mt-0.5 truncate max-w-30">
-              {user.title || statusLabel}
-            </p>
-          </div>
 
-          {/* Huddle button — visible on hover, opens ChannelModal */}
+            <span className="text-[#d1d2d3] text-xs shrink-0">·</span>
+
+            {/* DM user info */}
+            <div
+              className="min-w-0 cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); setDmSidebarOpen(true); }}
+            >
+              <div className="flex items-center gap-1">
+                <p className="text-[16px] font-semibold text-[#1d1c1d] truncate max-w-40">{user.name}</p>
+                {dmOnline && <span className="w-2.5 h-2.5 bg-[#2bac76] rounded-full shrink-0" />}
+                {!dmOnline && <span className="w-2.5 h-2.5 bg-[#405050] rounded-full shrink-0" />}
+              </div>
+              <p className="text-[15px] text-[#616061] truncate max-w-24">{ dmOnline ? "Active" : "Away"}</p>
+            </div>
+          </div>
           <div
             className={`shrink-0 transition-opacity duration-150 ${hovered ? "opacity-100" : "opacity-0"}`}
             onClick={(e) => { e.stopPropagation(); onStartHuddle?.(user); }}
           >
             <HuddleCustomButton
-              label="Huddle"
+              label="Start Huddle"
               bgColor="#ffffff"
               textColor="#1d1c1d"
               hoverColor="#f4f4f4"
@@ -116,17 +190,26 @@ export function UserCard({ user, onStartHuddle }: Props) {
               height="26px"
               px="8px"
               rounded="6px"
-              fontSize="11px"
+              fontSize="14px"
             />
           </div>
         </div>
       </div>
 
-      {/* ProfileSidebar — read-only view of this user */}
+      {/* Current user sidebar (editable) */}
+      {currentSidebarData && (
+        <ProfileSidebar
+          open={currentSidebarOpen}
+          onClose={() => setCurrentSidebarOpen(false)}
+          userdata={currentSidebarData}
+        />
+      )}
+
+      {/* DM user sidebar (read-only) */}
       <ProfileSidebar
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        userdata={sidebarUserdata}
+        open={dmSidebarOpen}
+        onClose={() => setDmSidebarOpen(false)}
+        userdata={dmSidebarData}
         readonly
       />
     </>

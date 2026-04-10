@@ -2,6 +2,7 @@
 
 import { FiSearch } from "react-icons/fi";
 import { useState } from "react";
+import { FaSearch } from "react-icons/fa";
 
 type FileSearchProps = {
   value: string;
@@ -27,8 +28,8 @@ export default function FileSearch({ value,placeholder, onChange }: FileSearchPr
         `}
       >
         {/* Search Icon */}
-        <div className="absolute left-[12px] top-1/2 -translate-y-1/2 text-[#9ca3af] text-[14px] pointer-events-none">
-          <FiSearch size={14} />
+        <div className="absolute top-[14px] left-[10px]">
+          <FaSearch size={14} className="absolute z-5  text-[#313131] text-[14px]" />
         </div>
 
         {/* Input */}

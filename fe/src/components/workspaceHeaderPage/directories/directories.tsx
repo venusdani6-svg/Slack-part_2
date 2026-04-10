@@ -13,27 +13,42 @@ import { useWorkspace } from "@/context/Workspacecontext";
 export default function Directories() {
     const [page, setPage] = useState("people");
 
-    // URL param is source of truth; fall back to context (localStorage-rehydrated)
     const urlWorkspaceId = useWorkspaceId();
     const { workspace } = useWorkspace();
     const workspaceId = urlWorkspaceId ?? workspace?.id;
 
     return (
-        <div className="flex bg-[#ffffff] text-[#313131] border-none border-[#797c814d]
-         w-[calc(100vw-430px)] overflow-hidden rounded-tr-[5px] rounded-br-[5px]">
-            <div className="w-[100%] h-[100%]">
-                <div className="flex items-center justify-between px-[250px]
-              h-[49px]  border-none border-[#2c2d30]">
-                    <span className="text-[#313131]">Directories</span>
+        <div className="flex flex-1 min-w-0 bg-[#ffffff] text-[#313131] overflow-hidden rounded-tr-[5px] rounded-br-[5px]">
+            <div className="flex flex-col w-full h-full min-h-0 overflow-hidden">
+
+                {/* HEADER */}
+                <div className="flex items-center justify-between 
+                    h-[49px] px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 border-[#e1e1e1]">
+                    <span className="text-[#313131] font-bold font-400">Directories</span>
                 </div>
 
-                <div className="w-full    border-[#ffffff]">
-                    <ChannelNavTabvar setPage={setPage} tabs={tabs} px="px-[250px]" />
-                    {page === "people" && <DirectoriesPeople workspaceId={workspaceId} />}
-                    {page === "Channels" && <DirectoriesChannel />}
-                    {page === "External" && <DirectoriesExternal />}
-                    {page === "Invitation" && <DirectoriesInvitation />}
-                    {page === "User Groups" && <DirectoriesUserGroup />}
+                {/* CONTENT */}
+                <div className="flex flex-col w-full h-full min-h-full">
+
+                    {/* TABS */}
+                    <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
+                        <ChannelNavTabvar
+                            setPage={setPage}
+                            tabs={tabs}
+                            px=""
+                        />
+                    </div>
+
+                    {/* PAGE */}
+                    <div className="flex-1 min-h-0">
+
+                        {page === "people" && <DirectoriesPeople workspaceId={workspaceId} />}
+                        {page === "Channels" && <DirectoriesChannel />}
+                        {page === "External" && <DirectoriesExternal />}
+                        {page === "Invitation" && <DirectoriesInvitation />}
+                        {page === "User Groups" && <DirectoriesUserGroup />}
+
+                    </div>
                 </div>
             </div>
         </div>

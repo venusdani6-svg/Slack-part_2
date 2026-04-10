@@ -1,49 +1,50 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+/* =========================
+   🔥 FINAL: Scoped Scrollbar
+   - No global CSS
+   - No arrows
+   - Fully encapsulated
+========================= */
 
-export default function ScrollContainer({
-  children,
-}: {
+type Props = {
   children: React.ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+};
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const handleScroll = () => {
-      setIsScrolling(true);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => {
-        setIsScrolling(false);
-      }, 800);
-    };
-    el.addEventListener("scroll", handleScroll);
-    return () => {
-      el.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
-
+export default function ScrollContainer({ children }: Props) {
   return (
-    <div className="relative h-full">
-      <div
-        ref={ref}
-        className="overflow-y-auto h-full pr-[6px]"
-      >
-        {children}
-      </div>
-      <div
-        className={`absolute top-0 right-[2px] w-[4px] rounded-full bg-[#c1c1c1] transition-opacity duration-300 ${
-          isScrolling ? "opacity-100" : "opacity-0"
-        }`}
-        style={{
-          height: "40px",
-        }}
-      />
+    <div className="relative flex-1 overflow-y-auto custom-scroll">
+      
+      {/* 🔥 SCOPED STYLE ONLY FOR THIS COMPONENT */}
+      <style jsx>{`
+        .custom-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+          background-color: #c4c4c4;
+          border-radius: 9999px;
+        }
+
+        /* 🔥 REMOVE ARROWS (LOCAL ONLY) */
+        .custom-scroll::-webkit-scrollbar-button {
+          display: none;
+          width: 0;
+          height: 0;
+        }
+
+        /* Firefox */
+        .custom-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #c4c4c4 transparent;
+        }
+      `}</style>
+
+      {children}
     </div>
   );
 }
