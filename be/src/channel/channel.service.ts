@@ -1,3 +1,6 @@
+//channel.service.ts
+
+/* eslint-disable prettier/prettier */
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Channel } from './entities/channel.entity';
@@ -128,7 +131,7 @@ export class ChannelService {
             workspace,
             channelType: type,
             creatorId: userId,
-            members: type === ChannelType.PRIVATE ? [user] : [],
+            members: [user]
         });
 
         if (type === ChannelType.PRIVATE && invitedUserIds && invitedUserIds.length > 0) {

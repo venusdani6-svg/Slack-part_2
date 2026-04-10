@@ -1,3 +1,5 @@
+//DirectoriesChannelsItem.tsx
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
@@ -61,7 +63,7 @@ export default function DirectoriesChannelsItem({
         <div className="w-[100%] h-[40%]">
           <div className="text-[#9ca3af] mt-[20px] text-[12px]">
             {joined && <span className="text-[green]">√ Joined · </span>}
-            {members && `members${members} · `}
+            {`members ${members ?? 0} · `}
             {comment && comment}
           </div>
         </div>
