@@ -1,23 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import ContentBlock from "./ContentBlock";
 import HelpHeader from "./HelpHeader";
 import { helpContent } from "./domi";
 import FeedbackFooter from "./FeedBackFooter";
 
+type Props = {
+  onClose: () => void;
+};
 
-export default function HelpPage() {
-  const [isVisible, setIsVisible] = useState(true);
-  if (!isVisible) return null;
+export default function HelpPage({ onClose }: Props) {
   return (
-    <div className="w-[520px] bg-white border border-[#ddd] rounded-[6px] flex flex-col max-h-[100vh]">
-      <HelpHeader onClose={() => setIsVisible(false)} />
-      <div className="overflow-y-auto px-[20px] py-[16px]">
+    <div className="w-full h-full bg-white flex flex-col">
+      <HelpHeader onClose={onClose} />
+      <div className="flex-1 overflow-y-auto px-5 py-4 sidebar-scroll">
         {helpContent.map((block, i) => (
           <ContentBlock key={i} {...block} />
         ))}
-         <FeedbackFooter />
+        <FeedbackFooter />
       </div>
     </div>
   );
