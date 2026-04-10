@@ -8,8 +8,8 @@ import type { PickerItem } from "./useHuddleSearch";
 
 function SkeletonCard() {
   return (
-    <div className="bg-white border border-[#e8e8e8] rounded-lg overflow-hidden animate-pulse">
-      <div className="h-[110px] bg-[#e1e1e1]" />
+    <div className="bg-white border border-[#e8e8e8] rounded-xl overflow-hidden animate-pulse">
+      <div className="h-24 bg-[#e1e1e1]" />
       <div className="px-3 py-2.5 flex flex-col gap-1.5">
         <div className="h-3 bg-[#e1e1e1] rounded w-[60%]" />
         <div className="h-2.5 bg-[#e1e1e1] rounded w-[40%]" />
@@ -21,7 +21,6 @@ function SkeletonCard() {
 export function DirectMessagesSection() {
   const { users, loading } = useDmUsers();
 
-  // ChannelModal state — pre-filled with the selected user
   const [huddleTarget, setHuddleTarget] = useState<PickerItem | undefined>();
   const [huddleOpen, setHuddleOpen] = useState(false);
 
@@ -65,7 +64,6 @@ export function DirectMessagesSection() {
         </div>
       </div>
 
-      {/* ChannelModal opens with the user's name pre-filled in the picker */}
       {huddleOpen && (
         <ChannelModal
           initialChannel={huddleTarget}

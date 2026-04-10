@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
 export type User = {
   id: string;
@@ -13,6 +13,8 @@ export type User = {
 type AuthContextType = {
   user: User | null;
   setUser: (user: User | null) => void;
+  /** Patch specific fields on the current user — triggers re-render in all consumers */
+  updateCurrentUser: (patch: Partial<User>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -20,14 +22,17 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  const updateCurrentUser = useCallback((patch: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
+    <AuthContext.Provider value={{ user, setUser, updateCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// custom hook (important)
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

@@ -7,14 +7,20 @@ import WorkspaceMenu from "@/components/WorkSpace/WorkspaceMenu";
 import { useSocket } from "@/providers/SocketProvider";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useActivityStore } from "@/store/activity-store";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/context/Authcontext";
+import type { User } from "@/context/Authcontext";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-export const WorkSpace = (props: { userData: any }) => {
+type WorkSpaceProps = {
+    userData: User | null;
+};
+
+export const WorkSpace = ({ userData }: WorkSpaceProps) => {
     const { socket } = useSocket();
-    const { next, prev, incrementUnread, clearUnread, setUnread, active } = useSidebarStore();
+    const { next, prev, incrementUnread, clearUnread, setUnread } = useSidebarStore();
     const { unreadCount: activityUnread } = useActivityStore();
-    const [userstate, setUserState] = useState<any>(null);
+    const { updateCurrentUser } = useAuth();
     const pathname = usePathname();
 
     // Sync activity unread count into the sidebar badge
@@ -22,16 +28,11 @@ export const WorkSpace = (props: { userData: any }) => {
         setUnread("activity", activityUnread);
     }, [activityUnread, setUnread]);
 
-    useEffect(() => {
-        if (props.userData) setUserState(props.userData);
-    }, [props.userData]);
-
-    // Clear unread for the currently active section when the user is on it
+    // Clear unread for the currently active section
     useEffect(() => {
         if (pathname?.includes("/dm/")) {
             clearUnread("dms");
         } else if (pathname?.match(/\/[^/]+\/[^/]+/)) {
-            // On a channel page
             clearUnread("home");
         }
     }, [pathname, clearUnread]);
@@ -50,23 +51,22 @@ export const WorkSpace = (props: { userData: any }) => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on("updated_profile", (data: any) => {
-            // Accept both "id" and "userId" — ProfileSidebar emits with "id",
-            // other paths may use "userId"
+        const handleProfileUpdate = (data: { userId?: string; id?: string; dispname?: string; avatar?: string }) => {
             const updatedId = data?.userId ?? data?.id;
-            if (updatedId && props.userData?.id && updatedId === props.userData.id) {
-                setUserState((prev: any) => prev ? { ...prev, dispname: data.dispname, avatar: data.avatar } : prev);
+            if (updatedId && userData?.id && updatedId === userData.id) {
+                // Update AuthContext so UserCard and WorkspaceMenu re-render instantly
+                updateCurrentUser({ dispname: data.dispname, avatar: data.avatar });
             }
-        });
+        };
 
-        // New channel message → increment "home" badge if user is not on a channel page
+        socket.on("updated_profile", handleProfileUpdate);
+
         socket.on("new_message", () => {
             if (!pathname?.match(/\/[^/]+\/[^/]+/) || pathname?.includes("/dm/")) {
                 incrementUnread("home");
             }
         });
 
-        // New DM message → increment "dms" badge if user is not on a DM page
         socket.on("new_dm_message", () => {
             if (!pathname?.includes("/dm/")) {
                 incrementUnread("dms");
@@ -74,21 +74,19 @@ export const WorkSpace = (props: { userData: any }) => {
         });
 
         return () => {
-            socket.off("updated_profile");
+            socket.off("updated_profile", handleProfileUpdate);
             socket.off("new_message");
             socket.off("new_dm_message");
         };
-    }, [socket, pathname, incrementUnread]);
+    }, [socket, pathname, incrementUnread, userData?.id, updateCurrentUser]);
 
     return (
         <div className="w-[70px] min-w-[70px] bg-gradient-to-b from-[#3F0E40] to-[#4A154B] flex flex-col items-center py-2">
-            {/* Workspace avatar — shows first letter of workspace name */}
             <div className="mb-3">
-                <WorkspaceAvatar userData={props.userData} />
+                <WorkspaceAvatar userData={userData} />
             </div>
 
             <div className="flex flex-col items-center gap-4 mt-2">
-                {/* hasDot removed — badge is now driven by real unread count in the store */}
                 <NavItem id="home" label="Home" />
                 <NavItem id="dms" label="DMs" />
                 <NavItem id="activity" label="Activity" />
@@ -96,10 +94,9 @@ export const WorkSpace = (props: { userData: any }) => {
                 <NavItem id="more" label="More" />
             </div>
 
-            {/* Bottom */}
             <div className="mt-auto flex flex-col items-center gap-4">
                 <CreateMenu />
-                <WorkspaceMenu userData={userstate} />
+                <WorkspaceMenu userData={userData} />
             </div>
         </div>
     );

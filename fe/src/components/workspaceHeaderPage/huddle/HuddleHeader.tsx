@@ -1,6 +1,10 @@
 import { HuddleCustomButton } from "./HuddleCustomButton";
 
-export function HuddlesHeader() {
+type Props = {
+  onNewHuddle?: () => void;
+};
+
+export function HuddlesHeader({ onNewHuddle }: Props) {
   return (
     <div className="flex items-center justify-between">
       <h1 className="text-[18px] font-bold text-[#313131]">
@@ -17,6 +21,7 @@ export function HuddlesHeader() {
         px="12px"
         rounded="6px"
         fontSize="13px"
+        onClick={onNewHuddle}
       />
     </div>
   );
