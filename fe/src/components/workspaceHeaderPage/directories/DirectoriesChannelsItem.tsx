@@ -44,7 +44,7 @@ export default function DirectoriesChannelsItem({
       onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="w-full h-[80px] flex items-center relative px-[12px] transition-all duration-[120ms] cursor-pointer border-b-[1px] border-[#767676]"
+      className="w-full h-[80px] flex items-center relative px-[12px] transition-all duration-[120ms] cursor-pointer border-[1px] border-[black]"
     >
       <div className="ml-[10px]">
         <div className="w-[100%] h-[60%]">
