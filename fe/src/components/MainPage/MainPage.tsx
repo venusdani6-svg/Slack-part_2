@@ -21,6 +21,7 @@ import Directories from "../workspaceHeaderPage/directories/directories";
 import { DraftsPage } from "../workspaceHeaderPage/Drapts&send/DraptsPage";
 import HuddlePage from "../workspaceHeaderPage/huddle/HuddlePage";
 import ThreadsPage from "../workspaceHeaderPage/threads/ThreadsPage";
+import ProfileSidebar from "../WorkSpace/ProfileSidebar";
 
 export const MainPage = (props: { userData: User | null }) => {
     const { socket } = useSocket();
@@ -28,6 +29,8 @@ export const MainPage = (props: { userData: User | null }) => {
     const [loading, setLoading] = useState(true);
     const { flag } = useMessageStore();
     const bottomRef = useRef<HTMLDivElement | null>(null);
+    const messageScrollRef = useRef<HTMLDivElement | null>(null);
+    const [activeMentionUserId, setActiveMentionUserId] = useState<string | null>(null);
     const searchparams = useSearchParams();
     const messageId = searchparams.get("messageId");
     const params = useParams();
@@ -150,6 +153,48 @@ export const MainPage = (props: { userData: User | null }) => {
         if (messageId) scrollToMessage(messageId);
     }, [messageId]);
 
+    useEffect(() => {
+        const el = messageScrollRef.current;
+        if (!el) return;
+
+        const emitDebugLog = (runId: string, message: string, data: Record<string, unknown>) => {
+            // #region agent log
+            fetch('http://127.0.0.1:7597/ingest/00c7dff1-0dec-43fd-8979-4145a69e3cda', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e4736c' },
+                body: JSON.stringify({
+                    sessionId: 'e4736c',
+                    runId,
+                    hypothesisId: 'H1-H2-H3',
+                    location: 'MainPage.tsx:messageScrollRef',
+                    message,
+                    data,
+                    timestamp: Date.now(),
+                }),
+            }).catch(() => { });
+            // #endregion
+        };
+
+        const reportMetrics = (runId: string, phase: string) => {
+            const rect = el.getBoundingClientRect();
+            emitDebugLog(runId, `channel-scroll-${phase}`, {
+                clientWidth: el.clientWidth,
+                scrollWidth: el.scrollWidth,
+                clientHeight: el.clientHeight,
+                scrollHeight: el.scrollHeight,
+                scrollTop: el.scrollTop,
+                overflowX: window.getComputedStyle(el).overflowX,
+                overflowY: window.getComputedStyle(el).overflowY,
+                rightGap: Math.round(window.innerWidth - rect.right),
+            });
+        };
+
+        reportMetrics('baseline', 'mount');
+        const onScroll = () => reportMetrics('baseline', 'scroll');
+        el.addEventListener("scroll", onScroll);
+        return () => el.removeEventListener("scroll", onScroll);
+    }, [msg.length, showThread, threadWidth]);
+
     const groupedMessages = groupMessagesByDate(sortByDate(msg));
 
     const handleReactionUpdate = (messageId: string, reactions: ReactionView[], messageOwnerId?: string, emoji?: string) => {
@@ -211,8 +256,8 @@ export const MainPage = (props: { userData: User | null }) => {
                     <div>
                         <MainTopBar />
                         <MainBar />
-                        <div className="w-full relative h-[calc(100vh-133px)] flex flex-col justify-between">
-                            <div className="h-full overflow-y-scroll flex flex-col">
+                        <div className="w-full relative h-[calc(100vh-133px)] flex flex-col justify-between overflow-hidden">
+                            <div ref={messageScrollRef} className="h-full overflow-y-auto overflow-x-hidden flex flex-col min-w-0">
                                 <Introduction />
                                 {Object.entries(groupedMessages).map(([date, messages]) => (
                                     <div key={date}>
@@ -239,6 +284,7 @@ export const MainPage = (props: { userData: User | null }) => {
                                                 onReactionUpdate={handleReactionUpdate}
                                                 onMessageUpdate={handleMessageUpdate}
                                                 onMessageDelete={handleMessageDelete}
+                                                onMentionClick={setActiveMentionUserId}
                                                 state="message"
                                             />
                                         ))}
@@ -267,6 +313,13 @@ export const MainPage = (props: { userData: User | null }) => {
                     <Thread onCloseThread={closeThread} userData={props.userData} channelId={channelId} />
                 </div>
             )}
+
+            <ProfileSidebar
+                open={!!activeMentionUserId}
+                onClose={() => setActiveMentionUserId(null)}
+                userdata={activeMentionUserId ? { id: activeMentionUserId } : null}
+                readonly={activeMentionUserId !== (props.userData?.id ?? null)}
+            />
         </div>
     );
 };

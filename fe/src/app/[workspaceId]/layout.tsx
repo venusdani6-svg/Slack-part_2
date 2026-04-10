@@ -4,7 +4,7 @@ import { MainPage } from "@/components/MainPage/MainPage";
 import TopBar from "@/components/TopBar/TopBar";
 import { WorkSpace } from "@/components/WorkSpace/WorkSpace";
 import { useRouter, usePathname } from "next/navigation";
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { useAuth } from "@/context/Authcontext";
 import { useSocket } from "@/providers/SocketProvider";
 import { useActivityStore } from "@/store/activity-store";
@@ -16,6 +16,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   const { user, setUser } = useAuth();
   const { socket } = useSocket();
   const { setItems } = useActivityStore();
+  const mainRowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -70,12 +71,53 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
     socket.emit("join_activity", user.id);
   }, [socket, user?.id]);
 
+  useEffect(() => {
+    const el = mainRowRef.current;
+    if (!el) return;
+
+    const emitDebugLog = (runId: string, hypothesisId: string, message: string, data: Record<string, unknown>) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7597/ingest/00c7dff1-0dec-43fd-8979-4145a69e3cda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e4736c' },
+        body: JSON.stringify({
+          sessionId: 'e4736c',
+          runId,
+          hypothesisId,
+          location: 'app/[workspaceId]/layout.tsx:mainRowRef',
+          message,
+          data,
+          timestamp: Date.now(),
+        }),
+      }).catch(() => { });
+      // #endregion
+    };
+
+    const report = (runId: string, phase: string) => {
+      const rect = el.getBoundingClientRect();
+      const styles = window.getComputedStyle(document.body);
+      emitDebugLog(runId, 'H5-H6', `layout-row-${phase}`, {
+        pathname,
+        viewportWidth: window.innerWidth,
+        rowClientWidth: el.clientWidth,
+        rowScrollWidth: el.scrollWidth,
+        rowRightGap: Math.round(window.innerWidth - rect.right),
+        bodyBg: styles.backgroundColor,
+      });
+    };
+
+    report('baseline', 'mount');
+    const onResize = () => report('baseline', 'resize');
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [pathname]);
+
   const isDmRoute = pathname?.includes("/dm/");
 
   return (
     <div className="h-screen flex flex-col">
       <TopBar />
-      <div className="flex h-[calc(100vh-38px)]">
+      <div ref={mainRowRef} className="flex h-[calc(100vh-38px)]">
         <WorkSpace userData={user} />
         {isDmRoute ? (
           <div className="flex-1 h-full overflow-hidden">{children}</div>

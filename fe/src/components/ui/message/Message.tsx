@@ -5,7 +5,6 @@ import { renderMentions } from '@/lib/renderMentions';
 import DOMPurify from 'dompurify';
 import dynamic from "next/dynamic";
 import React, { useEffect, useRef, useState } from "react";
-import ProfileSidebar from "@/components/WorkSpace/ProfileSidebar";
 import {
   FaEllipsisV,
   FaRegBookmark,
@@ -76,6 +75,8 @@ interface SlackMessageProps {
    * Used in DM mode where reactions go through a different endpoint.
    */
   onDmReactionSelect?: (emoji: string) => void;
+  /** Bubble mention user selection to page-level sidebar owner */
+  onMentionClick?: (userId: string) => void;
 }
 
 export const SlackMessage: React.FC<SlackMessageProps> = ({
@@ -103,6 +104,7 @@ export const SlackMessage: React.FC<SlackMessageProps> = ({
   onDeleteConfirm,
   hideThreadButton = false,
   onDmReactionSelect,
+  onMentionClick,
 }) => {
   const [showToolbar, setShowToolbar] = useState(false);
   const [showFiles, setShowFiles] = useState(true);
@@ -111,8 +113,6 @@ export const SlackMessage: React.FC<SlackMessageProps> = ({
   const [downloadTxt, setDownloadTxt] = useState('');
   const [isPending, setIsPending] = useState(false);
 
-  // Mention profile sidebar
-  const [mentionUserId, setMentionUserId] = useState<string | null>(null);
   /** URL of the image currently shown in the lightbox modal (null = closed) */
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
@@ -281,7 +281,7 @@ export const SlackMessage: React.FC<SlackMessageProps> = ({
     if (!mentionEl) return;
     const id = mentionEl.getAttribute("data-id");
     if (!id) return;
-    setMentionUserId(id);
+    onMentionClick?.(id);
   };
 
   const formatTime = (isoString: string) => {
@@ -597,13 +597,6 @@ export const SlackMessage: React.FC<SlackMessageProps> = ({
         </div>
       )}
 
-      {/* Mention profile sidebar — opens when a @mention is clicked */}
-      <ProfileSidebar
-        open={!!mentionUserId}
-        onClose={() => setMentionUserId(null)}
-        userdata={mentionUserId ? { id: mentionUserId } : null}
-        readonly={mentionUserId !== currentUserId}
-      />
     </div>
   );
 };
