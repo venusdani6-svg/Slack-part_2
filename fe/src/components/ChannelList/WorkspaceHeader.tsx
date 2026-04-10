@@ -12,12 +12,16 @@ import { useEffect, useRef, useState } from "react";
 import { useMessageStore } from "@/store/message-store";
 import ChannelOptionsMenu from "@/components/WorkSpace/ChannelOptionsMenu";
 import { WorkspaceNameMenu } from "@/components/WorkSpace/WorkspaceNameMenu";
+import Plant from "./Plant";
+import Trial from "./Trial";
+import ProUpgradeCard from "../ui/pro-upgrade-card/ProUpgradeCard";
 
 const items = [
   { label: "Threads", icon: FiMessageCircle },
   { label: "Huddles", icon: FiHeadphones },
   { label: "Drafts % Sent", icon: FiSend },
   { label: "Directories", icon: TbAddressBook },
+  { label: "3 tasks left", icon: Plant },
 ];
 
 export default function WorkspaceHeader() {
@@ -26,11 +30,13 @@ export default function WorkspaceHeader() {
 
   // ── ChannelOptionsMenu (FiSettings) ──────────────────────────────────────
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHover, setIsHover] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // ── WorkspaceNameMenu (workspace name click) ──────────────────────────────
   const [isNameMenuOpen, setIsNameMenuOpen] = useState(false);
   const nameMenuRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     const name = localStorage.getItem("workspaceName");
@@ -62,7 +68,7 @@ export default function WorkspaceHeader() {
   }, [isNameMenuOpen]);
 
   return (
-    <div className="py-3 border-b border-white/10">
+    <div className="py-3 border-b border-white/10 ">
       <div className="flex items-center justify-between ">
         {/* Workspace name — toggles WorkspaceNameMenu dropdown */}
         <div ref={nameMenuRef} className="relative">
@@ -73,7 +79,7 @@ export default function WorkspaceHeader() {
             <h1 className="font-bold text-[25px] px-2 rounded">
               {workspaceName}
             </h1>
-            <img src="/svg/arrowdown.svg" alt="arrowdown" width={"25px"} style={{marginLeft: "-5px"}}/>
+            <img src="/svg/arrowdown.svg" alt="arrowdown" width={"25px"} style={{ marginLeft: "-5px" }} />
           </div>
           {isNameMenuOpen && (
             <div className="absolute top-full left-0 mt-1 z-50">
@@ -82,7 +88,7 @@ export default function WorkspaceHeader() {
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           {/* Settings button — toggles ChannelOptionsMenu dropdown */}
           <div ref={menuRef} className="relative">
             <button
@@ -98,31 +104,36 @@ export default function WorkspaceHeader() {
               </div>
             )}
           </div>
-
-          <button className="p-1 rounded-sm hover:bg-white/10 px-2 cursor-pointer">
-            <FiEdit />
-          </button>
+          <div className="relative">
+            <button className="p-1 rounded-sm hover:bg-white/10 px-2 cursor-pointer">
+              <FiEdit />
+            </button>
+          </div>
         </div>
       </div>
 
-      {items.map((item) => {
-        const Icon = item.icon;
+      <Trial setIsHover={setIsHover} />
+      {isHover && <div className="absolute left-[385px] top-[92px] z-50"><ProUpgradeCard setIsHover={setIsHover}/></div>}
 
-        return (
-          <div
-            key={item.label}
-            onClick={() => setFlag(item.label)}
-            className={`flex items-center gap-3 px-2 py-1.5 rounded-md cursor-pointer transition ${
-              flag === item.label
+      {
+        items.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <div
+              key={item.label}
+              onClick={() => setFlag(item.label)}
+              className={`flex items-center gap-3 px-2 py-1.5 rounded-md cursor-pointer transition ${flag === item.label
                 ? "bg-white text-[rgb(92,42,92)]"
                 : "text-white/80 hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            <Icon size={16} />
-            <span className="text-sm">{item.label}</span>
-          </div>
-        );
-      })}
-    </div>
+                }`}
+            >
+              <Icon size={16} />
+              <span className="text-sm">{item.label}</span>
+            </div>
+          );
+        })
+      }
+    </div >
   );
 }
