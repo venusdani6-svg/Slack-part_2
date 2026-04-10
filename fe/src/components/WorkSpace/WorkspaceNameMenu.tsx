@@ -63,12 +63,12 @@ export const WorkspaceNameMenu: React.FC = () => {
 
       {/* Promo */}
       <div className="mb-2">
-        <div className="pt-1.5 pl-3 cursor-pointer hover:bg-[#1381ffaf] hover:text-white">
+        <div className="pt-1.5 pl-3 cursor-pointer hover:bg-[#1f5f93] hover:text-white">
           <p className="font-semibold text-[14px]">⏳ 5 days left on your Business+ Offer</p>
           <p className="text-[14px] mb-2 pt-1">Get 50% off Slack Business+ on your first 3 months.</p>
         </div>
 
-        <div className="flex justify-center hover:bg-[#1381ffaf]">
+        <div className="flex justify-center hover:bg-[#1f5f93]">
           <button className="text-[13px] font-bold border border-[#b4b4b4] rounded-md py-[3px] bg-white flex w-[93%] justify-center">
             <img src="/roket-dark.svg" className="w-4" />
             <p className="pl-1">Upgrade Plan</p>
@@ -86,7 +86,7 @@ export const WorkspaceNameMenu: React.FC = () => {
           ) : (
             <div
               key={i}
-              className="flex pt-1 items-center justify-between hover:bg-[#1381ffaf] hover:text-white cursor-pointer relative"
+              className="flex pt-1 items-center justify-between hover:bg-[#1f5f93] hover:text-white cursor-pointer relative"
               onMouseEnter={() => item.submenu && setOpen(item.label)}
               onMouseLeave={() => item.submenu && setOpen(null)}
               onClick={() => item.onClick?.()}
@@ -116,7 +116,7 @@ export const WorkspaceNameMenu: React.FC = () => {
                       ) : (
                         <div
                           key={j}
-                          className="flex mt-1.5 items-center justify-between hover:bg-[#1381ffaf] hover:text-white cursor-pointer"
+                          className="flex mt-1.5 items-center justify-between hover:bg-[#1f5f93] hover:text-white cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             sub.onClick?.();

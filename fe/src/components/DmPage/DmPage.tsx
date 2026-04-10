@@ -28,6 +28,7 @@ import { DraftsPage } from "../workspaceHeaderPage/Drapts&send/DraptsPage";
 import HuddlePage from "../workspaceHeaderPage/huddle/HuddlePage";
 import ThreadsPage from "../workspaceHeaderPage/threads/ThreadsPage";
 import ProfileSidebar from "../WorkSpace/ProfileSidebar";
+import SlackSetupCard from "../WorkSpace/SlackSetupCard";
 
 interface DmPageProps {
     conversationId: string;
@@ -290,6 +291,7 @@ export default function DmPage({ conversationId }: DmPageProps) {
             {flag === "Drafts % Sent" && <DraftsPage />}
             {flag === "Huddles" && <HuddlePage />}
             {flag === "Threads" && <ThreadsPage />}
+            {flag === "3 tasks left" && <div className="absolute top-16"><SlackSetupCard /></div>}
             {flag === "" &&
                 <div className="flex flex-col flex-1 min-w-0 h-full bg-white">
                     {/* Header */}

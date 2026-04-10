@@ -7,7 +7,7 @@ type Props = {
 const Trial = ({ setIsHover }: Props) => {
     return (
         <div
-            className="flex p-3 bg-[#7e5a81] rounded-xl border hover:bg-[#7e5a81a0] justify-between cursor-pointer"
+            className="flex p-3 bg-[#7e5a81] rounded-xl border hover:bg-[#7e5a81a0] justify-between cursor-pointer mt-2 mb-3"
             onMouseEnter={() => setIsHover(true)}
             onMouseLeave={() => setIsHover(false)}
         >
