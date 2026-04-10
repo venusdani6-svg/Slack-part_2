@@ -6,10 +6,11 @@ import { getUserById } from "@/lib/api";
 import { useSocket } from "@/providers/SocketProvider";
 import { useMessageStore } from "@/store/message-store";
 import { useDirectoryStore } from "@/store/directory-store";
+import { useAuth } from "@/context/Authcontext";
 
 type Presence = "online" | "idle" | "offline";
 
-type User = {
+type SidebarUser = {
     id: string;
     name: string;
     email: string;
@@ -18,23 +19,30 @@ type User = {
     presence?: Presence;
 };
 
+type UserDataProp = {
+    id: string;
+    email?: string;
+    fullname?: string;
+    dispname?: string | null;
+    avatar?: string | null;
+};
+
 type Props = {
     open: boolean;
     onClose: () => void;
-    userdata: any | null;
+    userdata: UserDataProp | null;
     readonly?: boolean;
 };
 
 export default function ProfileSidebar({ open, onClose, userdata, readonly = false }: Props) {
     const [editOpen, setEditOpen] = useState(false);
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<SidebarUser | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [localTime, setLocalTime] = useState("");
 
     const { socket } = useSocket();
     const { messages, setMessages } = useMessageStore();
-    // Single source of truth for directory cards
     const patchUser = useDirectoryStore((s) => s.patchUser);
 
     useEffect(() => {
@@ -75,6 +83,8 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
         // #endregion
     }, [open, !!userdata]);
 
+    // updateCurrentUser keeps AuthContext (and UserCard) in sync instantly
+    const { updateCurrentUser } = useAuth();
     // Fetch user
     const fetchUser = async (id: string) => {
         try {
@@ -82,8 +92,8 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
             setError(null);
             const data = await getUserById(id);
             setUser({ ...data, presence: "online" });
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to load user");
         } finally {
             setLoading(false);
         }
@@ -93,7 +103,6 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
         if (open && userdata) fetchUser(userdata.id);
     }, [open, userdata]);
 
-    // Local time
     useEffect(() => {
         const updateTime = () => {
             setLocalTime(new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
@@ -103,7 +112,6 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
         return () => clearInterval(interval);
     }, []);
 
-    // Socket: reflect remote profile updates inside the sidebar itself
     useEffect(() => {
         if (!socket) return;
         const handle = (payload: { id?: string; userId?: string; name?: string; dispname?: string; avatar?: string }) => {
@@ -126,15 +134,14 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
         };
     }, [socket]);
 
-    // ESC close
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [onClose]);
 
-    // Save profile
-    const handleSaveProfile = async (data: any) => {
+    const handleSaveProfile = async (data: { name?: string; dispname?: string; avatar?: File | null }) => {
+        if (!userdata?.id) return;
         try {
             let avatar = user?.avatar ?? null;
 
@@ -155,13 +162,21 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
             const result = await res.json();
             avatar = result.avatar ?? avatar;
 
-            // 1. Update directory store immediately — Cards re-render without waiting for socket
+            // 1. Update AuthContext — UserCard reads currentUser from here, re-renders instantly
+            if (!readonly) {
+                updateCurrentUser({
+                    dispname: result.dispname ?? data.dispname ?? data.name,
+                    avatar: result.avatar ?? avatar ?? undefined,
+                });
+            }
+
+            // 2. Update directory store — directory cards re-render without waiting for socket
             patchUser(userdata.id, {
                 name: result.dispname ?? data.dispname ?? data.name,
                 avatar: result.avatar ?? avatar ?? undefined,
             });
 
-            // 2. Broadcast via socket so other clients update too
+            // 3. Broadcast via socket so other clients update too
             socket?.emit("profile:update", {
                 id: userdata.id,
                 name: result.name,
@@ -169,7 +184,7 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
                 avatar: result.avatar,
             });
 
-            // 3. Update message store
+            // 4. Update message store
             setMessages(
                 messages.map((m) =>
                     m.sender?.id === userdata.id
@@ -178,9 +193,9 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
                 ),
             );
 
-            // 4. Update sidebar local state
+            // 5. Update sidebar local state
             setUser((prev) =>
-                prev ? { ...prev, name: result.name ?? data.name, dispname: result.dispname ?? data.dispname ?? data.name, avatar } : prev,
+                prev ? { ...prev, name: result.name ?? data.name ?? prev.name, dispname: result.dispname ?? data.dispname ?? data.name ?? prev.dispname, avatar } : prev,
             );
 
             setEditOpen(false);
@@ -221,7 +236,8 @@ export default function ProfileSidebar({ open, onClose, userdata, readonly = fal
                             <div className="flex flex-col items-center">
                                 <div className="relative w-[280px] h-[280px] rounded-xl overflow-hidden bg-[#7B2B8F] group">
                                     {user.avatar ? (
-                                        <img src={`${process.env.NEXT_PUBLIC_SOCKET_URL}${user.avatar}`} className="w-full h-full object-cover" />
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={`${process.env.NEXT_PUBLIC_SOCKET_URL}${user.avatar}`} alt={user.dispname} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
                                             <div className="w-[100px] h-[100px] bg-white rounded-full" />
