@@ -1,53 +1,66 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import {
-  PlusIcon,
-} from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { Tooltip } from "./Tooltip";
-import { HiOutlineStar } from "react-icons/hi";
+import { HiOutlineStar, HiStar, HiCheck } from "react-icons/hi";
+
+const STAR_DEFAULT  = "#433934";
+const STAR_SELECTED = "#FFD700";
+const ITEM_SELECTED = "#3E40AF";
 
 export default function Starred() {
-  const [open, setOpen] = useState(false);
+  const [open,    setOpen]    = useState(false);
+  const [starred, setStarred] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   return (
-    <div className="relative cursor-pointer" ref={ref}>
-      {/* Star BUTTON */}
-      <Tooltip children={<button onClick={() => setOpen((prev) => !prev)} className="p-1 border border-gray-300 rounded-md hover:bg-gray-200 cursor-pointer"><HiOutlineStar color="#433934" size={20} />
-        </button>} text1="Move channel" />
+    <div className="relative" ref={ref}>
+      <Tooltip text1="Move channel">
+        <button
+          onClick={() => setOpen((prev) => !prev)}
+          className={`p-1 border rounded-md cursor-pointer transition-colors duration-150 ${
+            starred
+              ? "border-yellow-300 bg-yellow-200 hover:bg-yellow-100"
+              : "border-gray-300 bg-white hover:bg-gray-200"
+          }`}
+        >
+          {starred
+            ? <HiStar       color={STAR_SELECTED} size={20} />
+            : <HiOutlineStar color={STAR_DEFAULT}  size={20} />
+          }
+        </button>
+      </Tooltip>
 
-      {/* DROPDOWN */}
       {open && (
-        <div className="absolute left-0 w-64 rounded-xl border border-gray-200 bg-white shadow-lg z-50">
-          
-          {/* Templates */}
-          <div>
-            <p className="text-[15px] pl-5 text-gray-600 mt-3">
-              Move to...
-            </p>
+        <div className="absolute left-0 top-full mt-1 w-64 rounded-xl border border-gray-200 bg-white shadow-lg z-50">
+          <p className="text-[15px] pl-5 text-gray-600 mt-3">Move to...</p>
 
-            <div className="pt-3 space-y-1">
-              <MenuItem icon={<HiOutlineStar size={20} />} label="Starred" />
-            </div>
+          <div className="pt-2 space-y-0.5">
+            <MenuItem
+              label="Starred"
+              selected={starred}
+              onToggle={() => setStarred((prev) => !prev)}
+              icon={
+                starred
+                  ? <HiStar       color={ITEM_SELECTED} size={18} />
+                  : <HiOutlineStar color={STAR_DEFAULT}  size={18} />
+              }
+            />
           </div>
 
           <Divider />
 
-          {/* Footer */}
           <div className="pb-3">
-            <MenuItem icon={<PlusIcon size={20} />} label="Create your first section" />
+            <MenuItem label="Create your first section" icon={<PlusIcon size={18} />} />
           </div>
         </div>
       )}
@@ -58,14 +71,26 @@ export default function Starred() {
 function MenuItem({
   icon,
   label,
+  selected = false,
+  onToggle,
 }: {
   icon?: React.ReactNode;
   label: string;
+  selected?: boolean;
+  onToggle?: () => void;
 }) {
   return (
-    <button className="w-full cursor-pointer flex items-center gap-1 pt-1 pb-1 pr-2 pl-5 text-sm hover:w-full hover:text-white hover:bg-[#1266a9] text-left">
-      {icon && <span className="text-gray-600">{icon}</span>}
-      <span className="text-[15px] text-black">{label}</span>
+    <button
+      onClick={onToggle}
+      className={`group w-full flex items-center justify-between pl-5 pr-3 py-1.5 text-sm text-left transition-colors duration-100 hover:bg-[#1266a9] hover:text-white ${selected ? "bg-blue-50" : ""}`}
+    >
+      <div className="flex items-center gap-2">
+        <span className="w-4 shrink-0 flex items-center justify-center">
+          {selected && <HiCheck size={14} color={ITEM_SELECTED} />}
+        </span>
+        {icon && <span className="shrink-0">{icon}</span>}
+        <span className="text-[14px] text-black group-hover:text-white">{label}</span>
+      </div>
     </button>
   );
 }
