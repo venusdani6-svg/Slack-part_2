@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useState, useMemo } from "react";
@@ -10,36 +11,36 @@ export default function DirectoriesUserGroup() {
   const [search, setSearch] = useState("");
 
   const filteredData = useMemo(() => {
-  const q = search.toLowerCase();
+    const q = search.toLowerCase();
 
-  return Channel.data.filter((item) => {
-    return Object.entries(item).some(([key, val]) => {
-      let searchable = String(val).toLowerCase();
+    return Channel.data.filter((item) => {
+      return Object.entries(item).some(([key, val]) => {
+        let searchable = String(val).toLowerCase();
 
-      if (key === "joined") {
-        searchable = val ? "joined true" : "not joined false";
-      }
+        if (key === "joined") {
+          searchable = val ? "joined true" : "not joined false";
+        }
 
-      return `${key} ${searchable}`.includes(q);
+        return `${key} ${searchable}`.includes(q);
+      });
     });
-  });
-}, [search]);
+  }, [search]);
   return (
     <div className="w-full h-full ">
-      <div className="w-full px-[250px] flex justify-between items-end mb-[20px]">
-       
-          <FileSearch
-            value={search}
-            placeholder="Search for people"
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 flex justify-between items-end mb-[20px]">
+
+        <FileSearch
+          value={search}
+          placeholder="Search for people"
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
 
       </div>
       <div className="h-[calc(100vh-250px)] flex flex-col items-center min-h-[60vh] sidebar-scroll">
-        <div className="w-[100%] px-[250px] mb-[20px] border-[#1f2937] flex items-center justify-between">
+        <div className="w-[100%] px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 mb-[20px] border-[#1f2937] flex items-center justify-between">
           <div className="flex items-center gap-[8px]">
-          
+
 
             <DirectoriesDropdownBtn>
               <DirectoriesDropdownBtn.Trigger placeholder="Workspaces" />
@@ -49,18 +50,18 @@ export default function DirectoriesUserGroup() {
               </DirectoriesDropdownBtn.Content>
             </DirectoriesDropdownBtn>
 
-           
-        <CustomButton
-          label="Invite People"
-          showIcon={false}
-          bgColor="bg-transparent"
-          hoverColor="hover:bg-[#e1e1e1]"
-          activeColor="active:bg-[#c1c1c1]"
-          textColor="text-[#313131]"
-          height="h-[40px]"
-          paddingX="px-[10px]"
-          radius="rounded-[6px]"
-        />
+
+            <CustomButton
+              label="Invite People"
+              showIcon={false}
+              bgColor="bg-transparent"
+              hoverColor="hover:bg-[#e1e1e1]"
+              activeColor="active:bg-[#c1c1c1]"
+              textColor="text-[#313131]"
+              height="h-[32px]"
+              paddingX="px-[10px]"
+              radius="rounded-[6px]"
+            />
 
             <div className="flex items-center gap-[6px] ml-[8px] text-[#313131] text-[14px] font-[500] cursor-pointer">
               <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] fill-[#38bdf8]">
