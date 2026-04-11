@@ -98,7 +98,8 @@ export default function WorkspacesPage() {
       setWorkspace(ws);
 
       //  FIXED
-      router.push(`/${ws.id}`);
+      router.push(`/auth/launching`);
+      // router.push(`/${ws.id}`);
     } catch (err) {
       console.error(err);
     }
