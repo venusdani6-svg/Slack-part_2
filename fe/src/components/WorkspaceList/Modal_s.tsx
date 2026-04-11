@@ -39,21 +39,6 @@ const toneStyles: Record<Tone, string> = {
   primary: "bg-purple-50 dark:bg-purple-900/20",
 };
 
-// =============================
-// Default Icon
-// =============================
-const DefaultIcon = ({ className }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    className={cx("w-7 h-7", className)}
-    fill="none"
-    aria-hidden="true"
-  >
-    <rect x="3" y="4" width="18" height="16" rx="3" className="fill-purple-500" />
-    <rect x="6" y="7" width="12" height="2" className="fill-white" />
-    <rect x="6" y="11" width="8" height="2" className="fill-white" />
-  </svg>
-);
 
 // =============================
 // Props
@@ -66,7 +51,7 @@ interface TemplateCardProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: Size;
   tone?: Tone;
   disabled?: boolean;
-  icon?: React.ReactNode;
+  icon?: string;
 }
 
 // =============================
@@ -130,8 +115,8 @@ const TemplateCard = forwardRef<HTMLDivElement, TemplateCardProps>(
         </div>
 
         {/* Icon */}
-        <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-100 dark:bg-purple-800/30 flex items-center justify-center">
-          {icon ?? <DefaultIcon />}
+        <div className="w-20 h-20 md:w-16 md:h-16  dark:bg-purple-800/30 flex items-center justify-center">
+          <img src={icon} className="w-16 h-16" alt="" />
         </div>
       </div>
     );

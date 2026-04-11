@@ -11,6 +11,7 @@ import { api } from "@/api";
 import { Tooltip } from "./Tooltip";
 import Starred from "./Starred";
 import { useSocket } from "@/providers/SocketProvider";
+import MessageContextMenu from "../MainPage/MessageContextMenu";
 
 interface ChannelDetail {
   id: string;
@@ -27,6 +28,7 @@ export default function MainTopBar() {
 
   const [channel, setChannel] = useState<ChannelDetail | null>(null);
   const [memberCount, setMemberCount] = useState<number>(0);
+  const [messageMenu, setMessageMenu] = useState(false);
   const { socket } = useSocket();
 
   useEffect(() => {
@@ -171,12 +173,17 @@ export default function MainTopBar() {
         <Tooltip
           children={
             <button className="p-2 border border-white rounded-md hover:bg-gray-100 cursor-pointer">
-              <BsThreeDotsVertical color="#5d524c" size={20} />
+              <BsThreeDotsVertical
+                color="#5d524c"
+                size={20}
+                onClick={() => setMessageMenu(!messageMenu)}
+              />
             </button>
           }
           text1="More actions"
         />
 
+        {messageMenu && <div className="absolute z-20 top-20 right-5"><MessageContextMenu setMessageMenu={setMessageMenu} /></div>}
       </div>
     </div>
   );

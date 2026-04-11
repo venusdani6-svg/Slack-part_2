@@ -14,6 +14,7 @@ import ChannelOptionsMenu from "@/components/WorkSpace/ChannelOptionsMenu";
 import { WorkspaceNameMenu } from "@/components/WorkSpace/WorkspaceNameMenu";
 import Plant from "./Plant";
 import Trial from "./Trial";
+import { useParams } from "next/navigation";
 import ProUpgradeCard from "../ui/pro-upgrade-card/ProUpgradeCard";
 
 const items = [
@@ -35,8 +36,11 @@ export default function WorkspaceHeader() {
 
   // ── WorkspaceNameMenu (workspace name click) ──────────────────────────────
   const [isNameMenuOpen, setIsNameMenuOpen] = useState(false);
+  const params = useParams();
   const nameMenuRef = useRef<HTMLDivElement>(null);
-
+  const channelId = Array.isArray(params.channelId)
+    ? params.channelId[0]
+    : params.channelId;
 
   useEffect(() => {
     const name = localStorage.getItem("workspaceName");
@@ -76,10 +80,10 @@ export default function WorkspaceHeader() {
             className="flex items-center hover:bg-white/10 rounded-md px-2 cursor-pointer"
             onClick={() => setIsNameMenuOpen((prev) => !prev)}
           >
-            <h1 className="font-bold text-[25px] px-2 rounded">
+            <h1 className="font-bold text-[19px] px-2 rounded">
               {workspaceName}
             </h1>
-            <img src="/svg/arrowdown.svg" alt="arrowdown" width={"25px"} style={{ marginLeft: "-5px" }} />
+            <img src="/svg/arrowdown.svg" alt="arrowdown" width={"20px"} style={{ marginLeft: "-5px" }} />
           </div>
           {isNameMenuOpen && (
             <div className="absolute top-full left-0 mt-1 z-50">
@@ -113,7 +117,7 @@ export default function WorkspaceHeader() {
       </div>
 
       <Trial setIsHover={setIsHover} />
-      {isHover && <div className="absolute left-[385px] top-[92px] z-50"><ProUpgradeCard setIsHover={setIsHover}/></div>}
+      {channelId && isHover ? <div className="absolute left-[385px] top-[92px] z-50 "><ProUpgradeCard setIsHover={setIsHover} /></div> : <div></div>}
 
       {
         items.map((item) => {
