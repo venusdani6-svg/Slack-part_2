@@ -1,96 +1,172 @@
-//DirectoriesChannels.tsx
-
-/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
+
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useParams } from "next/navigation";
+import { FiLock } from "react-icons/fi";
 
 import CustomButton from "../component/channel_button";
 import FileSearch from "../component/file_search";
 import DirectoriesDropdownBtn from "./DirectoriesDropdownBtn";
-import { Channel } from "./domi";
-import { FiLock } from "react-icons/fi";
 import DirectoriesChannelsItem from "./DirectoriesChannelsItem";
 import BannerSection from "./BannerSection";
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { Channel } from "./domi";
+
 import { useAuth } from "@/context/Authcontext";
 import { useSocket } from "@/providers/SocketProvider";
 import { useWorkspaceId } from "@/hooks/useWorkspaceId";
 import CreateChannelModal from "@/components/ui/modal/CreateChannelModal";
+import { api } from "@/api";
+
+/* ================= TYPES ================= */
+
+interface Member {
+    id: string;
+    dispname: string;
+    email: string;
+    avatar?: string;
+}
+
+interface ChannelDetail {
+    id: string;
+    name: string;
+    channelType: "public" | "private";
+    members: Member[];
+}
+
+interface ChannelItem {
+    id: string;
+    title: string;
+    comment: "public" | "private";
+    members: Member[]; // ✅ now array
+    joined: boolean;
+}
+
+/* ================= COMPONENT ================= */
 
 export default function DirectoriesChannel() {
     const { socket } = useSocket();
     const { user } = useAuth();
     const workspaceId = useWorkspaceId();
+    const params = useParams();
     const listRef = useRef<HTMLDivElement>(null);
 
+    const channelId = Array.isArray(params.channelId)
+        ? params.channelId[0]
+        : params.channelId;
+
     const userId = user?.id;
+    const [channel, setChannel] = useState<ChannelDetail | null>(null);
+    const members = channel?.members ?? [];
+    const [memberCount, setMemberCount] = useState(0);
+   const [channels, setChannels] = useState<any[]>([]);
 
-    const [channels, setChannels] = useState<any[]>([]);
     const [search, setSearch] = useState("");
+ 
+    const [channelFilter, setChannelFilter] =
+        useState<"all" | "joined" | "not_joined">("all");
 
-    const [channelFilter, setChannelFilter] = useState<"all" | "joined" | "not_joined">("all");
-    const [typeFilter, setTypeFilter] = useState<"all" | "public" | "private">("all");
-    const [sortType, setSortType] = useState<"recommended" | "az" | "za" | "members_desc" | "members_asc">("recommended");
+    const [typeFilter, setTypeFilter] =
+        useState<"all" | "public" | "private">("all");
+
+    const [sortType, setSortType] =
+        useState<"recommended" | "az" | "za" | "members_desc" | "members_asc">(
+            "recommended"
+        );
+
     const [open, setOpen] = useState(false);
-    const handleOpenModal = useCallback(() => {
-        setOpen(true);
-    }, []);
 
-    const handleCloseModal = useCallback(() => {
-        setOpen(false);
-    }, []);
+    /* ================= HELPERS ================= */
 
-    // ✅ NORMALIZER
     const normalizeChannel = useCallback(
         (ch: any) => ({
             id: ch.id,
             title: ch.name,
+            label: ch.name,
             comment: ch.channelType,
             members: ch.members?.length || 0,
-            joined: ch.members?.some((m: any) => m.id === userId),
+            joined: ch.members?.some((m:any) => m.id === userId) ?? false,
         }),
-        [userId]
+        [userId, channelId, socket]
     );
 
-    // ✅ SOCKET EFFECT
+    /* ================= DATA FETCH ================= */
+
+    useEffect(() => {
+        if (!channelId) return setChannel(null);
+
+        let active = true;
+        api.get<ChannelDetail>(`/api/channels/${channelId}`)
+            .then((res) => active && setChannel(res.data))
+            .catch(() => active && setChannel(null));
+
+        return () => { active = false; };
+    }, [channelId]);
+
+    useEffect(() => {
+        let active = true;
+
+        api.get<{ count: number }>("/api/user/count")
+            .then((res) => active && setMemberCount(res.data.count))
+            .catch(() => active && setMemberCount(0));
+
+        return () => { active = false; };
+    }, []);
+
+    /* ================= SOCKET ================= */
+
+       useEffect(() => {
+        if (!socket || !channelId) return;
+        const handler = (updated: ChannelDetail) => {
+          if (updated.id === channelId) setChannel(updated);
+        };
+        socket.on('channel:updated', handler);
+        return () => { socket.off('channel:updated', handler); };
+      }, [socket, channelId]);
+
     useEffect(() => {
         if (!socket || !workspaceId || !userId) return;
 
         socket.emit("join_workspace", { workspaceId });
         socket.emit("channel:list", { workspaceId, userId });
 
-        const handleList = (data: any[]) =>
+        const onList = (data: ChannelDetail[]) =>
             setChannels(data.map(normalizeChannel));
 
-        const handleCreated = (ch: any) =>
+        const onCreate = (ch: ChannelDetail) =>
             setChannels((prev) =>
                 prev.some((c) => c.id === ch.id)
                     ? prev
                     : [...prev, normalizeChannel(ch)]
             );
 
-        const handleDeleted = ({ channelId }: any) =>
+        const onDelete = ({ channelId }: { channelId: string }) =>
             setChannels((prev) => prev.filter((c) => c.id !== channelId));
 
-        const handleUpdated = (ch: any) =>
+        const onUpdate = (ch: ChannelDetail) =>
             setChannels((prev) =>
                 prev.map((c) =>
                     c.id === ch.id ? normalizeChannel(ch) : c
                 )
             );
 
-        socket.on("channel:list", handleList);
-        socket.on("channel:created", handleCreated);
-        socket.on("channel:deleted", handleDeleted);
-        socket.on("channel:updated", handleUpdated);
+        socket.on("channel:list", onList);
+        socket.on("channel:created", onCreate);
+        socket.on("channel:deleted", onDelete);
+        socket.on("channel:updated", onUpdate);
 
         return () => {
-            socket.off("channel:list", handleList);
-            socket.off("channel:created", handleCreated);
-            socket.off("channel:deleted", handleDeleted);
-            socket.off("channel:updated", handleUpdated);
+            socket.off("channel:list", onList);
+            socket.off("channel:created", onCreate);
+            socket.off("channel:deleted", onDelete);
+            socket.off("channel:updated", onUpdate);
         };
     }, [socket, workspaceId, userId, normalizeChannel]);
+
+    /* ================= AUTO SCROLL ================= */
 
     const prevLength = useRef(0);
 
@@ -100,53 +176,41 @@ export default function DirectoriesChannel() {
         }
         prevLength.current = channels.length;
     }, [channels]);
-    // ✅ FILTER CONFIG (NO MORE if-else)
-    const filterMap = {
-        joined: (c: any) => c.joined,
-        not_joined: (c: any) => !c.joined,
-    };
 
-    const typeMap = {
-        public: (c: any) => c.comment === "public",
-        private: (c: any) => c.comment === "private",
-    };
+    /* ================= FILTERING ================= */
 
-    const sortMap = {
-        az: (a: any, b: any) => a.title.localeCompare(b.title),
-        za: (a: any, b: any) => b.title.localeCompare(a.title),
-        members_desc: (a: any, b: any) => b.members - a.members,
-        members_asc: (a: any, b: any) => a.members - b.members,
-    };
-
-    // ✅ FINAL DATA PIPELINE
     const filteredData = useMemo(() => {
-        let result = [...channels];
+        let data = [...channels];
 
-        // search
         if (search) {
             const q = search.toLowerCase();
-            result = result.filter((c) =>
-                c.title.toLowerCase().includes(q)
+            data = data.filter((c) => c.title.toLowerCase().includes(q));
+        }
+
+        if (channelFilter !== "all") {
+            data = data.filter((c) =>
+                channelFilter === "joined" ? c.joined : !c.joined
             );
         }
 
-        // membership filter
-        if (channelFilter !== "all") {
-            result = result.filter(filterMap[channelFilter]);
-        }
-
-        // type filter
         if (typeFilter !== "all") {
-            result = result.filter(typeMap[typeFilter]);
+            data = data.filter((c) => c.comment === typeFilter);
         }
 
-        // sorting
-        if (sortType !== "recommended") {
-            result.sort(sortMap[sortType]);
-        }
+        if (sortType === "az") data.sort((a, b) => a.title.localeCompare(b.title));
+        if (sortType === "za") data.sort((a, b) => b.title.localeCompare(a.title));
+        if (sortType === "members_desc") data.sort((a, b) => b.members.length - a.members.length);
+        if (sortType === "members_asc") data.sort((a, b) => a.members.length - b.members.length);
 
-        return result;
+        return data;
     }, [channels, search, channelFilter, typeFilter, sortType]);
+
+    /* ================= UI STATE ================= */
+
+    const handleOpenModal = useCallback(() => setOpen(true), []);
+    const handleCloseModal = useCallback(() => setOpen(false), []);
+
+    /* ================= RETURN ================= */
 
     return (
         <div className="w-full h-full flex flex-col flex-1 min-h-0 ">
@@ -215,9 +279,9 @@ export default function DirectoriesChannel() {
                                         icon={item.icon}
                                         onClick={() =>
                                             setTypeFilter(
-                                                item.label === "public"
+                                                item.label.toLowerCase() === "public"
                                                     ? "public"
-                                                    : item.label === "Private"
+                                                    : item.label.toLowerCase() === "private"
                                                         ? "private"
                                                         : "all"
                                             )
@@ -286,7 +350,16 @@ export default function DirectoriesChannel() {
                         className="w-full flex-1 min-h-[300px] py-[10px] border-t border-[#e1e1e1] rounded-[12px]"
                     >
                         {filteredData.map((item) => (
-                            <DirectoriesChannelsItem key={item.id} {...item} />
+                            <DirectoriesChannelsItem
+                                key={item.id}
+                                id={item.id}
+                                icon={item.comment === "public" ? FiLock : FiLock}
+                                title={item.title}
+                                comment={item.comment}
+                                members={item.members}
+                                joined={item.joined}
+                                memberCount={memberCount}
+                            />
                         ))}
                     </div>
 

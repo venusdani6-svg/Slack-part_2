@@ -19,10 +19,11 @@ type ChannelsItemProps = {
   id: string;
   joined?: boolean;
   onClick?: () => void;
+  memberCount:number;
 };
 
 export default function DirectoriesChannelsItem({
-  title, comment, members, active, icon: Icon, joined, onClick, id,
+  title, comment, members, active, icon: Icon, memberCount, joined, onClick, id,
 }: ChannelsItemProps) {
   const [hovered, setHovered] = useState(false);
   const params = useParams();
@@ -62,7 +63,7 @@ export default function DirectoriesChannelsItem({
         <div className="w-[100%] h-[40%]">
           <div className="text-[#9ca3af] mt-[20px] text-[12px]">
             {joined && <span className="text-[green]">√ Joined · </span>}
-            {`members ${members ?? 0} · `}
+            {comment==="private" ? members : memberCount}
             {comment && comment}
           </div>
         </div>
