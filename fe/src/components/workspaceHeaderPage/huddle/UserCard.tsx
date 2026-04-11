@@ -66,25 +66,6 @@ function Avatar({ src, name, isOnline, onClick }: AvatarProps) {
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
-/**
- * Dual-profile DM card.
- *
- * Layout:
- *   ┌─────────────────────────────────────────┐
- *   │  [bg image]                             │
- *   │    [you avatar]    [dm user avatar]     │
- *   ├─────────────────────────────────────────┤
- *   │  You · Active    DmUser · Away  [Huddle]│
- *   └─────────────────────────────────────────┘
- *
- * Click zones:
- *  - Left avatar / name  → ProfileSidebar for current user (editable)
- *  - Right avatar / name → ProfileSidebar for DM user (read-only)
- *  - "Huddle" button     → onStartHuddle(user)
- *  - Card body           → onStartHuddle(user)
- */
 export function UserCard({ user, onStartHuddle }: UserCardProps) {
   const { user: currentUser } = useAuth();
 
