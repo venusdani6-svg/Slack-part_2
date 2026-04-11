@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
@@ -51,21 +50,14 @@ export default function DirectoriesChannel() {
     const { socket } = useSocket();
     const { user } = useAuth();
     const workspaceId = useWorkspaceId();
-    const params = useParams();
     const listRef = useRef<HTMLDivElement>(null);
 
-    const channelId = Array.isArray(params.channelId)
-        ? params.channelId[0]
-        : params.channelId;
-
     const userId = user?.id;
-    const [channel, setChannel] = useState<ChannelDetail | null>(null);
-    const members = channel?.members ?? [];
     const [memberCount, setMemberCount] = useState(0);
-   const [channels, setChannels] = useState<any[]>([]);
+    const [channels, setChannels] = useState<any[]>([]);
 
     const [search, setSearch] = useState("");
- 
+
     const [channelFilter, setChannelFilter] =
         useState<"all" | "joined" | "not_joined">("all");
 
@@ -88,23 +80,11 @@ export default function DirectoriesChannel() {
             label: ch.name,
             comment: ch.channelType,
             members: ch.members?.length || 0,
-            joined: ch.members?.some((m:any) => m.id === userId) ?? false,
+            joined: ch.members.some((m: any) => m.id === userId) ?? true,
         }),
-        [userId, channelId, socket]
+        [userId, socket]
     );
 
-    /* ================= DATA FETCH ================= */
-
-    useEffect(() => {
-        if (!channelId) return setChannel(null);
-
-        let active = true;
-        api.get<ChannelDetail>(`/api/channels/${channelId}`)
-            .then((res) => active && setChannel(res.data))
-            .catch(() => active && setChannel(null));
-
-        return () => { active = false; };
-    }, [channelId]);
 
     useEffect(() => {
         let active = true;
@@ -118,14 +98,6 @@ export default function DirectoriesChannel() {
 
     /* ================= SOCKET ================= */
 
-       useEffect(() => {
-        if (!socket || !channelId) return;
-        const handler = (updated: ChannelDetail) => {
-          if (updated.id === channelId) setChannel(updated);
-        };
-        socket.on('channel:updated', handler);
-        return () => { socket.off('channel:updated', handler); };
-      }, [socket, channelId]);
 
     useEffect(() => {
         if (!socket || !workspaceId || !userId) return;
@@ -133,10 +105,10 @@ export default function DirectoriesChannel() {
         socket.emit("join_workspace", { workspaceId });
         socket.emit("channel:list", { workspaceId, userId });
 
-        const onList = (data: ChannelDetail[]) =>
+        const onList = (data: any[]) =>
             setChannels(data.map(normalizeChannel));
 
-        const onCreate = (ch: ChannelDetail) =>
+        const onCreate = (ch: any) =>
             setChannels((prev) =>
                 prev.some((c) => c.id === ch.id)
                     ? prev
@@ -146,7 +118,7 @@ export default function DirectoriesChannel() {
         const onDelete = ({ channelId }: { channelId: string }) =>
             setChannels((prev) => prev.filter((c) => c.id !== channelId));
 
-        const onUpdate = (ch: ChannelDetail) =>
+        const onUpdate = (ch: any) =>
             setChannels((prev) =>
                 prev.map((c) =>
                     c.id === ch.id ? normalizeChannel(ch) : c
@@ -181,7 +153,6 @@ export default function DirectoriesChannel() {
 
     const filteredData = useMemo(() => {
         let data = [...channels];
-
         if (search) {
             const q = search.toLowerCase();
             data = data.filter((c) => c.title.toLowerCase().includes(q));

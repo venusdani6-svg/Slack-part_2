@@ -1,6 +1,4 @@
 //DirectoriesChannelsItem.tsx
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { IconType } from "react-icons";
@@ -23,7 +21,7 @@ type ChannelsItemProps = {
 };
 
 export default function DirectoriesChannelsItem({
-  title, comment, members, active, icon: Icon, memberCount, joined, onClick, id,
+  title, comment, members, memberCount, onClick, id,
 }: ChannelsItemProps) {
   const [hovered, setHovered] = useState(false);
   const params = useParams();
@@ -62,7 +60,7 @@ export default function DirectoriesChannelsItem({
         </div>
         <div className="w-[100%] h-[40%]">
           <div className="text-[#9ca3af] mt-[20px] text-[12px]">
-            {joined && <span className="text-[green]">√ Joined · </span>}
+            <span className="text-[green]">√ Joined · </span>
             {comment==="private" ? members : memberCount}
             {comment && comment}
           </div>
