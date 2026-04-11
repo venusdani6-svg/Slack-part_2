@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import LaunchingWorkspace from "./LaunchingWorkspace";
+import LaunchingWorkspace from "./page";
 
 // Metadata for Storybook UI
 const meta: Meta<typeof LaunchingWorkspace> = {
-  title: "Slack/LaunchingWorkspace", // Clear grouping
+  title: "auth/launching/page", // Clear grouping
   component: LaunchingWorkspace,
   parameters: {
     layout: "fullscreen", // Required for pixel accuracy

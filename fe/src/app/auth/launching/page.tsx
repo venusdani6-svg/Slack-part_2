@@ -1,23 +1,19 @@
 "use client"; // Required because we may add client-side effects (like redirect or timers)
 
 import { useEffect, useState } from "react"; // Used for optional redirect behavior
+import { useWorkspace } from "@/context/Workspacecontext";
 
-// Props definition for reusability and scalability
-type LaunchingWorkspaceProps = {
-    workspaceName: string; // Name displayed in heading
-    initials: string; // Workspace icon initials (e.g., NW)
-    autoRedirect?: boolean; // Optional: simulate Slack auto-open behavior
-};
-
-export default function LaunchingWorkspace({
-    workspaceName,
-    initials,
-    autoRedirect = false, // Default disabled for flexibility
-}: LaunchingWorkspaceProps) {
+export default function LaunchingWorkspace() {
 
     // Optional: simulate Slack-like auto redirect after delay
     const [showSpinner, setShowSpinner] = useState(true);
     const [messageStep, setMessageStep] = useState(0);
+    const workspaceId = localStorage.getItem('workspaceId');
+
+    const { workspace } = useWorkspace();
+    const workspace_name = workspace?.name ?? null;
+    
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setShowSpinner(false); // hide after 2 seconds
@@ -27,14 +23,14 @@ export default function LaunchingWorkspace({
     }, []);
     useEffect(() => {
         const timers = [
-          setTimeout(() => setMessageStep(1), 500),   // "Ironing folds..."
-          setTimeout(() => setMessageStep(2), 1000),  // "Boiling water..."
-          setTimeout(() => setMessageStep(3), 2000),  // "Focusing figments..."
-          setTimeout(() => setMessageStep(4), 3000),  // Final paragraph
+            setTimeout(() => setMessageStep(1), 500),   // "Ironing folds..."
+            setTimeout(() => setMessageStep(2), 1000),  // "Boiling water..."
+            setTimeout(() => setMessageStep(3), 2000),  // "Focusing figments..."
+            setTimeout(() => setMessageStep(4), 3000),  // Final paragraph
         ];
-      
+
         return () => timers.forEach(clearTimeout);
-      }, []);
+    }, []);
     return (
         // Root container: exact Slack-like neutral background and vertical centering
         <div className="min-h-screen bg-[#f8f8f8] flex flex-col items-center pt-[200px] text-center">
@@ -53,7 +49,7 @@ export default function LaunchingWorkspace({
             <div
                 className="w-[56px] h-[56px]  rounded-[12px]  bg-[#6b6b6b]  flex items-center justify-center  text-white  text-[20px]  font-semibold  mb-[24px] relative"
             >
-                {initials} {/* Workspace initials */}
+                {workspace_name ? workspace_name.charAt(0).toUpperCase() : "?"} {/* Workspace initials */}
             </div>
             {showSpinner && (
                 <span
@@ -66,11 +62,11 @@ export default function LaunchingWorkspace({
             <h1
                 className="text-[42px] leading-[40px] font-bold text-[#1d1c1d] mt-[50px]"
             >
-                Launching {workspaceName}
+                Launching {workspace_name}
             </h1>
 
             {/* Description */}
-            <div className="text-[18px] leading-[24px] text-[#616061] max-w-[420px] h-[48px] mt-4">
+            <div className="text-[18px] leading-[24px] text-[#616061] max-w-[520px] h-[48px] mt-4">
                 {messageStep === 0 && <p>...</p>}
                 {messageStep === 1 && <p>Ironing folds...</p>}
                 {messageStep === 2 && <p>Boiling water...</p>}
@@ -84,10 +80,10 @@ export default function LaunchingWorkspace({
                         </span>
                         to launch the desktop app.
                         <br />
-                        Not working? You can also
+                        Not working? You can also&nbsp;
                         <a
-                            href="#"
-                            className="text-[#1264a3] hover:underline font-medium"
+                            href={`/${workspaceId}`}
+                            className="text-[#1264a3] cursor-pointer hover:underline font-medium"
                         >
                             use Slack in your browser
                         </a>.
