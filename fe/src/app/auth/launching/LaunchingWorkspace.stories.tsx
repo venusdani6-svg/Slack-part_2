@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import LaunchingWorkspace from "./Page";
+import LaunchingWorkspace from "./page";
 
 // Metadata for Storybook UI
 const meta: Meta<typeof LaunchingWorkspace> = {
